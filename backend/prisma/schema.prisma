@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Usuario {
+  usuarioId       String         @id @default(uuid())
+  cpfCnpj         String         @unique
+  nomeCompleto    String
+  email           String         @unique
+  telefone        String?
+  status          String         @default("ATIVO")
+  dataCriacao     DateTime       @default(now())
+  dataAtualizacao DateTime       @updatedAt
+  senha           String
+  receberSms      Boolean        @default(false)
+  receberEmail    Boolean        @default(false)
+  receberPush     Boolean        @default(false)
+
+  contas          UsuarioConta[]
+  contatos        ContatoPix[]
+  logs            LogAtividade[]
+}
+
+model Conta {
+  contaId         String         @id @default(uuid())
+  agencia         String
+  numeroConta     String         @unique
+  saldo           Decimal        @default(0.00) @db.Decimal(10, 2)
+  limiteDiarioPix Decimal        @default(1000.00) @db.Decimal(10, 2)
+  status          String         @default("ATIVA")
+  dataCriacao     DateTime       @default(now())
+  dataAtualizacao DateTime       @updatedAt
+
+  usuarios          UsuarioConta[]
+  chavesPix         ChavePix[]
+  transacoesOrigem  TransacaoPix[] @relation("ContaOrigem")
+  transacoesDestino TransacaoPix[] @relation("ContaDestino")
+}
+
+model UsuarioConta {
+  usuarioId String
+  contaId   String
+  papel     String
+
+  usuario   Usuario @relation(fields: [usuarioId], references: [usuarioId])
+  conta     Conta   @relation(fields: [contaId], references: [contaId])
+
+  @@id([usuarioId, contaId])
+}
+
+model ChavePix {
+  chaveId     String   @id @default(uuid())
+  tipoChave   String
+  valorChave  String   @unique
+  status      String   @default("ATIVA")
+  dataCriacao DateTime @default(now())
+  contaId     String
+
+  conta       Conta    @relation(fields: [contaId], references: [contaId])
+}
+
+model ContatoPix {
+  contatoId   String  @id @default(uuid())
+  nomeContato String
+  chavePix    String
+  tipoChave   String
+  usuarioId   String
+
+  usuario     Usuario @relation(fields: [usuarioId], references: [usuarioId])
+}
+
+model TransacaoPix {
+  transacaoId        String    @id @default(uuid())
+  chavePixUtilizada  String?
+  valor              Decimal   @db.Decimal(10, 2)
+  tipoOperacao       String
+  status             String
+  latitude           Float?
+  longitude          Float?
+  dataAgendamento    DateTime?
+  dataEfetivacao     DateTime?
+  
+  transacaoEstornoId String?   @unique
+  contaOrigemId      String
+  contaDestinoId     String?
+
+  contaOrigem        Conta         @relation("ContaOrigem", fields: [contaOrigemId], references: [contaId])
+  contaDestino       Conta?        @relation("ContaDestino", fields: [contaDestinoId], references: [contaId])
+  transacaoEstorno   TransacaoPix? @relation("Estorno", fields: [transacaoEstornoId], references: [transacaoId])
+  estornoDe          TransacaoPix? @relation("Estorno")
+}
+
+model LogAtividade {
+  logId     String   @id @default(uuid())
+  acao      String
+  dataHora  DateTime @default(now())
+  usuarioId String
+
+  usuario   Usuario  @relation(fields: [usuarioId], references: [usuarioId])
+}
