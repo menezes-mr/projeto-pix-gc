@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { PixKeyController } from './pix-key.controller';
-import { PixKeyService } from './pix-key.service';
+import { PixKeyController } from './pix.key.controller';
+import { PixKeyService } from './pix.key.service';
 
 @Module({
   controllers: [PixKeyController],
