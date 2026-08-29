@@ -85,17 +85,17 @@ model TransacaoPix {
   longitude          Float?
   dataAgendamento    DateTime?
   dataEfetivacao     DateTime?
-  
+
+  transacaoExternaId String?   @unique   
   transacaoEstornoId String?   @unique
-  contaOrigemId      String
+  contaOrigemId      String?             
   contaDestinoId     String?
 
-  contaOrigem        Conta         @relation("ContaOrigem", fields: [contaOrigemId], references: [contaId])
+  contaOrigem        Conta?        @relation("ContaOrigem", fields: [contaOrigemId], references: [contaId])
   contaDestino       Conta?        @relation("ContaDestino", fields: [contaDestinoId], references: [contaId])
   transacaoEstorno   TransacaoPix? @relation("Estorno", fields: [transacaoEstornoId], references: [transacaoId])
   estornoDe          TransacaoPix? @relation("Estorno")
 }
-
 model LogAtividade {
   logId     String   @id @default(uuid())
   acao      String
