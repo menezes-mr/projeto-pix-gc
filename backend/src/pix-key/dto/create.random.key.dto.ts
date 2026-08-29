@@ -5,9 +5,7 @@ export class CreateRandomKeyDto {
   @IsNotEmpty()
   contaId: string;
 
-  // Provisório: enquanto não existe autenticação, o usuário vem no corpo.
-  // Quando o login estiver pronto, troque por req.user.id e remova este campo.
-  // necessário para validar se a conta pertence ao usuário informado.
+ //so por enquanto, pq é preciso para logar a ação de criação da chave aleatória
   @IsString()
   @IsNotEmpty()
   usuarioId: string;
