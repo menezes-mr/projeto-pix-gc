@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
-export class CreateContaDto {
+export class UpdateContaDto {
   @IsNotEmpty({ message: 'O ID do usuário é obrigatório.' })
   @IsString()
   usuarioId!: string;
