@@ -17,7 +17,7 @@ export class CreateUsuarioDto {
   @IsNotEmpty({ message: 'O e-mail é obrigatório' })
   email!: string;
 
-  @IsString({ message: 'O CPF/CNPJ deve ser um texto' })
+  @IsString({ message: 'O CPF/CNPJ deve conter apenas números' })
   @IsNotEmpty({ message: 'O CPF/CNPJ é obrigatório' })
   @Matches(/^(\d{11}|\d{14})$/, {
     message:
@@ -26,7 +26,11 @@ export class CreateUsuarioDto {
   cpfCnpj!: string;
 
   @ValidateIf((_, value) => value !== null)
-  @IsString({ message: 'O telefone deve ser do tipo texto' })
+  @IsString({ message: 'O telefone deve ser uma string' })
+  @Matches(/^\d{10,11}$/, {
+    message:
+      'O telefone deve conter apenas números (DDD + número, entre 10 e 11 dígitos)',
+  })
   @IsOptional()
   telefone?: string | null;
 
