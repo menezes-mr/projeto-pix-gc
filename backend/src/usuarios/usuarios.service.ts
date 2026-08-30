@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import * as bcrypt from 'bcrypt';
@@ -50,5 +54,25 @@ export class UsuariosService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { senha: _, ...usuarioSemSenha } = novoUsuario;
     return usuarioSemSenha;
+  }
+
+  async remove(id: string) {
+    const usuarioExiste = await this.prisma.usuario.findFirst({
+      where: {
+        usuarioId: id,
+        status: 'ATIVO',
+      },
+    });
+
+    if (!usuarioExiste) {
+      throw new NotFoundException('Usuário não encontrado ou já inativo');
+    }
+
+    await this.prisma.usuario.update({
+      where: { usuarioId: id },
+      data: { status: 'INATIVO' },
+    });
+
+    return { mensagem: 'Usuário inativado com sucesso' };
   }
 }
