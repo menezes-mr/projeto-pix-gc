@@ -1,5 +1,5 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
-import {PixRecebimentoService} from './pix-recebimento.service'; 
+import { PixRecebimentoService } from './pix-recebimento.service';
 
 import { RecebimentoPixDto } from './dto/recebimento-pix.dto';
 
