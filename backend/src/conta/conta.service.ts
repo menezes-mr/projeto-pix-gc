@@ -31,45 +31,54 @@ export class ContaService {
     }
 
     const agenciaGerada = '0001';
-    let numeroContaGerado = this.gerarNumeroContaUnico();
+    let conta;
+    let tentativas = 0;
+    const maxTentativas = 5;
 
-    let contaExiste = await this.prisma.conta.findFirst({
-      where: { agencia: agenciaGerada, numeroConta: numeroContaGerado },
-    });
+    while (tentativas < maxTentativas) {
+      const numeroContaGerado = this.gerarNumeroContaUnico();
+      try {
+        conta = await this.prisma.$transaction(async (tx) => {
+          const novaConta = await tx.conta.create({
+            data: {
+              agencia: agenciaGerada,
+              numeroConta: numeroContaGerado,
+              limiteDiarioPix: dto.limiteDiarioPix ?? 1000.0,
+            },
+          });
 
-    while (contaExiste) {
-      numeroContaGerado = this.gerarNumeroContaUnico();
-      contaExiste = await this.prisma.conta.findFirst({
-        where: { agencia: agenciaGerada, numeroConta: numeroContaGerado },
-      });
+          await tx.usuarioConta.create({
+            data: {
+              usuarioId: dto.usuarioId,
+              contaId: novaConta.contaId,
+              papel: 'TITULAR',
+            },
+          });
+
+          await tx.logAtividade.create({
+            data: {
+              usuarioId: dto.usuarioId,
+              acao: 'CRIACAO DE CONTA',
+            },
+          });
+
+          return novaConta;
+        });
+        break; 
+      } catch (error: any) {
+        if (error.code === 'P2002') {
+          tentativas++;
+          continue; 
+        }
+        throw error;
+      }
     }
 
-    return await this.prisma.$transaction(async (tx) => {
-      const conta = await tx.conta.create({
-        data: {
-          agencia: agenciaGerada,
-          numeroConta: numeroContaGerado,
-          limiteDiarioPix: dto.limiteDiarioPix ?? 1000.0,
-        },
-      });
+    if (!conta) {
+      throw new Error('Não foi possível gerar um número de conta único após várias tentativas.');
+    }
 
-      await tx.usuarioConta.create({
-        data: {
-          usuarioId: dto.usuarioId,
-          contaId: conta.contaId,
-          papel: 'TITULAR',
-        },
-      });
-
-      await tx.logAtividade.create({
-        data: {
-          usuarioId: dto.usuarioId,
-          acao: 'CRIACAO DE CONTA',
-        },
-      });
-
-      return conta;
-    });
+    return conta;
   }
 
   async atualizarConfiguracoes(contaId: string, dto: UpdateContaDto) {
