@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, Param } from '@nestjs/common';
 import { PixKeyService } from './pix-key.service';
 import { CreateRandomKeyDto } from './dto/create.random.key.dto';
 import { CreateChavePixDto } from './dto/create-chave-pix.dto';
@@ -17,5 +17,10 @@ export class PixKeyController {
   @HttpCode(HttpStatus.CREATED)
   async createChave(@Body() dto: CreateChavePixDto) {
     return this.pixKeyService.associarChavePix(dto);
+  }
+
+  @Get(':valorChave')
+  async validarChave(@Param('valorChave') valorChave: string) {
+    return this.pixKeyService.validarChavePix(valorChave);
   }
 }

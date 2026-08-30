@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
 import { CreateChavePixDto } from './dto/create-chave-pix.dto';
 
 
@@ -123,5 +117,43 @@ export class PixKeyService {
     ]);
 
     return novaChave;
+  }
+
+  async validarChavePix(valorChave: string) {
+    const chave = await this.prisma.chavePix.findUnique({
+      where: { valorChave },
+      include: {
+        conta: {
+          include: {
+            usuarios: {
+              include: {
+                usuario: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!chave || chave.status !== 'ATIVA' || chave.conta.status !== 'ATIVA' || !chave.conta.usuarios[0] || chave.conta.usuarios[0].usuario.status !== 'ATIVO') {
+      throw new NotFoundException('Chave PIX inválida ou inexistente');
+    }
+
+    const usuario = chave.conta.usuarios[0].usuario;
+    const cpfCnpj = usuario.cpfCnpj;
+    
+    let docMascarado = cpfCnpj;
+    if (cpfCnpj.length === 11) {
+      docMascarado = `***.${cpfCnpj.substring(3, 6)}.${cpfCnpj.substring(6, 9)}-**`;
+    } else if (cpfCnpj.length === 14) {
+      docMascarado = `**.${cpfCnpj.substring(2, 5)}.${cpfCnpj.substring(5, 8)}/****-**`;
+    }
+
+    return {
+      chavePix: chave.valorChave,
+      tipoChave: chave.tipoChave,
+      nomeCompleto: usuario.nomeCompleto,
+      documentoMascarado: docMascarado,
+    };
   }
 }
