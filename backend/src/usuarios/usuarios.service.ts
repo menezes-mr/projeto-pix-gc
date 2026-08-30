@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
@@ -62,10 +63,27 @@ export class UsuariosService {
         usuarioId: id,
         status: 'ATIVO',
       },
+      include: {
+        contas: {
+          include: {
+            conta: true,
+          },
+        },
+      },
     });
 
     if (!usuarioExiste) {
       throw new NotFoundException('Usuário não encontrado ou já inativo');
+    }
+
+    const possuiSaldoPendente = usuarioExiste.contas.some(
+      (vinculo) => Number(vinculo.conta.saldo) !== 0,
+    );
+
+    if (possuiSaldoPendente) {
+      throw new BadRequestException(
+        'Não é possível inativar o usuário: existem contas com saldo pendente.',
+      );
     }
 
     await this.prisma.usuario.update({
