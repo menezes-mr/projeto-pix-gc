@@ -1,0 +1,176 @@
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateContaDto } from './dto/create-conta.dto';
+import { UpdateContaDto } from './dto/update-conta.dto';
+
+@Injectable()
+export class ContaService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  private gerarNumeroContaUnico(): string {
+    const numeroSemDigito = Math.floor(100000 + Math.random() * 900000);
+    const digito = Math.floor(Math.random() * 10);
+    return `${numeroSemDigito}-${digito}`;
+  }
+
+  async criarConta(dto: CreateContaDto) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { usuarioId: dto.usuarioId },
+    });
+
+    if (!usuario) {
+      throw new NotFoundException('Usuário não encontrado.');
+    }
+
+    if (usuario.status !== 'ATIVO') {
+      throw new ForbiddenException('Usuários inativos não podem abrir contas bancárias.');
+    }
+
+    const agenciaGerada = '0001';
+    let conta;
+    let tentativas = 0;
+    const maxTentativas = 5;
+
+    while (tentativas < maxTentativas) {
+      const numeroContaGerado = this.gerarNumeroContaUnico();
+      try {
+        conta = await this.prisma.$transaction(async (tx) => {
+          const novaConta = await tx.conta.create({
+            data: {
+              agencia: agenciaGerada,
+              numeroConta: numeroContaGerado,
+              limiteDiarioPix: dto.limiteDiarioPix ?? 1000.0,
+            },
+          });
+
+          await tx.usuarioConta.create({
+            data: {
+              usuarioId: dto.usuarioId,
+              contaId: novaConta.contaId,
+              papel: 'TITULAR',
+            },
+          });
+
+          await tx.logAtividade.create({
+            data: {
+              usuarioId: dto.usuarioId,
+              acao: 'CRIACAO DE CONTA',
+            },
+          });
+
+          return novaConta;
+        });
+        break; 
+      } catch (error: any) {
+        if (error.code === 'P2002') {
+          tentativas++;
+          continue; 
+        }
+        throw error;
+      }
+    }
+
+    if (!conta) {
+      throw new Error('Não foi possível gerar um número de conta único após várias tentativas.');
+    }
+
+    return conta;
+  }
+
+  async atualizarConfiguracoes(contaId: string, dto: UpdateContaDto) {
+    const conta = await this.prisma.conta.findUnique({
+      where: { contaId },
+    });
+
+    if (!conta) {
+      throw new NotFoundException('Conta bancária não encontrada.');
+    }
+
+    if (conta.status !== 'ATIVA') {
+      throw new ForbiddenException('Apenas contas com status ATIVA podem ser alteradas.');
+    }
+
+    const vinculoUsuario = await this.prisma.usuarioConta.findFirst({
+      where: {
+        contaId,
+        usuarioId: dto.usuarioId,
+        papel: 'TITULAR',
+      },
+      include: {
+        usuario: true,
+      },
+    });
+
+    if (!vinculoUsuario || vinculoUsuario.usuario.status !== 'ATIVO') {
+      throw new ForbiddenException(
+        'Usuário não encontrado, não é o titular desta conta ou está INATIVO.',
+      );
+    }
+
+    return await this.prisma.$transaction(async (tx) => {
+      const contaAtualizada = await tx.conta.update({
+        where: { contaId },
+        data: {
+          ...(dto.limiteDiarioPix !== undefined && { limiteDiarioPix: dto.limiteDiarioPix }),
+        },
+      });
+
+      await tx.logAtividade.create({
+        data: {
+          usuarioId: dto.usuarioId,
+          acao: 'ATUALIZACAO DE CONTA',
+        },
+      });
+
+      return contaAtualizada;
+    });
+  }
+
+  async encerrarConta(contaId: string) {
+    const conta = await this.prisma.conta.findFirst({
+      where: {
+        contaId,
+        status: 'ATIVA',
+      },
+      include: {
+        usuarios: true, 
+      },
+    });
+
+    if (!conta) {
+      throw new NotFoundException('Conta bancária ativa não encontrada.');
+    }
+
+    if (Number(conta.saldo) !== 0) {
+      throw new BadRequestException('A conta possui saldo e não pode ser encerrada.');
+    }
+
+    const usuarioId = conta.usuarios[0]?.usuarioId;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.conta.update({
+        where: { contaId },
+        data: {
+          status: 'INATIVA',
+          dataAtualizacao: new Date(),
+        },
+      });
+
+      if (usuarioId) {
+        await tx.logAtividade.create({
+          data: {
+            usuarioId,
+            acao: 'ENCERRAMENTO DE CONTA',
+          },
+        });
+      }
+    });
+
+    return { mensagem: 'Conta bancária encerrada com sucesso.' };
+  }
+}
