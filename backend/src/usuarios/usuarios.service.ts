@@ -68,6 +68,21 @@ export class UsuariosService {
       throw new NotFoundException('Usuário não encontrado ou inativo');
     }
 
+    if (updateUsuarioDto.email) {
+      const emailEmUso = await this.prisma.usuario.findFirst({
+        where: {
+          email: updateUsuarioDto.email,
+          usuarioId: { not: id },
+        },
+      });
+
+      if (emailEmUso) {
+        throw new ConflictException(
+          'O e-mail informado já está em uso por outro usuário',
+        );
+      }
+    }
+
     const usuarioAtualizado = await this.prisma.usuario.update({
       where: { usuarioId: id },
       data: updateUsuarioDto,
