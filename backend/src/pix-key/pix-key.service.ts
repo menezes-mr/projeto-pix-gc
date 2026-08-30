@@ -1,7 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
 import { CreateChavePixDto } from './dto/create-chave-pix.dto';
-
-
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -9,8 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class PixKeyService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async generateRandomKey(contaId: string, usuarioId: string) {
-   
+  private async validarContaUsuario(contaId: string, usuarioId: string) {
     const conta = await this.prisma.conta.findUnique({
       where: { contaId },
       include: {
@@ -21,36 +18,39 @@ export class PixKeyService {
       },
     });
 
-    if (!conta) {
-      throw new NotFoundException('Conta não encontrada');
-    }
+    if (!conta) throw new NotFoundException('Conta não encontrada');
+    
     const vinculo = conta.usuarios[0];
-    if (!vinculo) {
-      throw new ForbiddenException('Esta conta não pertence ao usuário informado');
+    if (!vinculo) throw new ForbiddenException('Esta conta não pertence ao usuário informado');
+    
+    if (conta.status !== 'ATIVA' || vinculo.usuario.status !== 'ATIVO') {
+      throw new BadRequestException('A conta e o usuário precisam estar ativos');
     }
-    if (conta.status !== 'ATIVA') {
-      throw new BadRequestException('A conta não está ativa');
-    }
-    if (vinculo.usuario.status !== 'ATIVO') {
-      throw new BadRequestException('O usuário não está ativo');
-    }
-    const date = new Date();
-    const valorChave = randomUUID();
+
+    return { conta, usuario: vinculo.usuario };
+  }
+
+  private mascararDocumento(doc: string) {
+    if (doc.length === 11) return `***.${doc.substring(3, 6)}.${doc.substring(6, 9)}-**`;
+    if (doc.length === 14) return `**.${doc.substring(2, 5)}.${doc.substring(5, 8)}/****-**`;
+    return doc;
+  }
+
+  async generateRandomKey(contaId: string, usuarioId: string) {
+    await this.validarContaUsuario(contaId, usuarioId);
+
     const [chave] = await this.prisma.$transaction([
       this.prisma.chavePix.create({
         data: {
           tipoChave: 'ALEATORIA',
-          valorChave,
+          valorChave: randomUUID(),
           status: 'ATIVA',
-          dataCriacao: date,
+          dataCriacao: new Date(),
           contaId,
         },
       }),
       this.prisma.logAtividade.create({
-        data: {
-          acao: 'CRIACAO DE CHAVE ALEATORIA',
-          usuarioId,
-        },
+        data: { acao: 'CRIACAO DE CHAVE ALEATORIA', usuarioId },
       }),
     ]);
 
@@ -59,42 +59,17 @@ export class PixKeyService {
 
   async associarChavePix(dto: CreateChavePixDto) {
     const { tipoChave, valorChave, contaId, usuarioId } = dto;
+    const { usuario } = await this.validarContaUsuario(contaId, usuarioId);
 
-    const conta = await this.prisma.conta.findUnique({
-      where: { contaId },
-      include: {
-        usuarios: {
-          where: { usuarioId },
-          include: { usuario: true },
-        },
-      },
-    });
-
-    if (!conta) {
-      throw new NotFoundException('Conta não encontrada');
-    }
-
-    const vinculo = conta.usuarios[0];
-    if (!vinculo) {
-      throw new ForbiddenException('Esta conta não pertence ao usuário informado');
-    }
-
-    if (conta.status !== 'ATIVA' || vinculo.usuario.status !== 'ATIVO') {
-      throw new BadRequestException('A conta e o usuário precisam estar ativos');
-    }
-
-    if ((tipoChave === 'CPF' || tipoChave === 'CNPJ') && valorChave !== vinculo.usuario.cpfCnpj) {
+    if ((tipoChave === 'CPF' || tipoChave === 'CNPJ') && valorChave !== usuario.cpfCnpj) {
       throw new BadRequestException(`O valor fornecido não corresponde ao ${tipoChave} cadastrado para o usuário.`);
     }
 
-    if (tipoChave === 'EMAIL' && valorChave !== vinculo.usuario.email) {
+    if (tipoChave === 'EMAIL' && valorChave !== usuario.email) {
       throw new BadRequestException('O valor fornecido não corresponde ao EMAIL cadastrado para o usuário.');
     }
 
-    const chaveExistente = await this.prisma.chavePix.findUnique({
-      where: { valorChave },
-    });
-
+    const chaveExistente = await this.prisma.chavePix.findUnique({ where: { valorChave } });
     if (chaveExistente) {
       throw new ConflictException('Esta chave PIX já está cadastrada no sistema.');
     }
@@ -109,10 +84,7 @@ export class PixKeyService {
         },
       }),
       this.prisma.logAtividade.create({
-        data: {
-          acao: 'CRIACAO DE CHAVE PIX',
-          usuarioId,
-        },
+        data: { acao: 'CRIACAO DE CHAVE PIX', usuarioId },
       }),
     ]);
 
@@ -126,9 +98,7 @@ export class PixKeyService {
         conta: {
           include: {
             usuarios: {
-              include: {
-                usuario: true,
-              },
+              include: { usuario: true },
             },
           },
         },
@@ -140,20 +110,12 @@ export class PixKeyService {
     }
 
     const usuario = chave.conta.usuarios[0].usuario;
-    const cpfCnpj = usuario.cpfCnpj;
-    
-    let docMascarado = cpfCnpj;
-    if (cpfCnpj.length === 11) {
-      docMascarado = `***.${cpfCnpj.substring(3, 6)}.${cpfCnpj.substring(6, 9)}-**`;
-    } else if (cpfCnpj.length === 14) {
-      docMascarado = `**.${cpfCnpj.substring(2, 5)}.${cpfCnpj.substring(5, 8)}/****-**`;
-    }
 
     return {
       chavePix: chave.valorChave,
       tipoChave: chave.tipoChave,
       nomeCompleto: usuario.nomeCompleto,
-      documentoMascarado: docMascarado,
+      documentoMascarado: this.mascararDocumento(usuario.cpfCnpj),
     };
   }
 }
