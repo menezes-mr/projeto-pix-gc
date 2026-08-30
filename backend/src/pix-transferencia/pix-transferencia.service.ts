@@ -57,6 +57,12 @@ export class PixTransferenciaService {
         );
       }
 
+      if (valor.greaterThan(contaOrigem.limiteDiarioPix)) {
+        throw new BadRequestException(
+          'O valor ultrapassa o limite diário PIX da conta',
+        );
+      }
+
       const chaveDestino = await tx.chavePix.findUnique({
         where: { valorChave: chavePixDestino },
         include: { conta: true },
@@ -68,6 +74,12 @@ export class PixTransferenciaService {
         chaveDestino.conta.status !== 'ATIVA'
       ) {
         throw new NotFoundException('Chave PIX de destino inválida');
+      }
+
+      if (chaveDestino.contaId === contaOrigemId) {
+        throw new BadRequestException(
+          'Não é possível transferir para a própria conta',
+        );
       }
 
       const contaOrigemAtualizada = await tx.conta.update({
