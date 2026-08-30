@@ -86,10 +86,18 @@ export class UsuariosService {
       );
     }
 
-    await this.prisma.usuario.update({
-      where: { usuarioId: id },
-      data: { status: 'INATIVO' },
-    });
+    await this.prisma.$transaction([
+      this.prisma.usuario.update({
+        where: { usuarioId: id },
+        data: { status: 'INATIVO' },
+      }),
+      this.prisma.logAtividade.create({
+        data: {
+          usuarioId: id,
+          acao: 'INATIVACAO_USUARIO',
+        },
+      }),
+    ]);
 
     return { mensagem: 'Usuário inativado com sucesso' };
   }
