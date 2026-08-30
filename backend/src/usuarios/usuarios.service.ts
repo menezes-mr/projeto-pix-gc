@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
@@ -102,5 +103,73 @@ export class UsuariosService {
 
     delete (usuarioAtualizado as { senha?: string }).senha;
     return usuarioAtualizado;
+  }
+
+  async remove(id: string) {
+    const usuarioExiste = await this.prisma.usuario.findFirst({
+      where: {
+        usuarioId: id,
+        status: 'ATIVO',
+      },
+      include: {
+        contas: {
+          include: {
+            conta: true,
+          },
+        },
+      },
+    });
+
+    if (!usuarioExiste) {
+      throw new NotFoundException('Usuário não encontrado ou já inativo');
+    }
+
+    const possuiSaldoPendente = usuarioExiste.contas.some(
+      (vinculo) => Number(vinculo.conta.saldo) !== 0,
+    );
+
+    if (possuiSaldoPendente) {
+      throw new BadRequestException(
+        'Não é possível inativar o usuário: existem contas com saldo pendente.',
+      );
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.usuario.update({
+        where: { usuarioId: id },
+        data: { status: 'INATIVO' },
+      }),
+      this.prisma.logAtividade.create({
+        data: {
+          usuarioId: id,
+          acao: 'INATIVACAO_USUARIO',
+        },
+      }),
+    ]);
+
+    return { mensagem: 'Usuário inativado com sucesso' };
+  }
+
+  async findAll() {
+    return this.prisma.usuario.findMany({
+      where: {
+        status: 'ATIVO',
+      },
+    });
+  }
+
+  async findOne(id: string) {
+    const usuario = await this.prisma.usuario.findFirst({
+      where: {
+        usuarioId: id,
+        status: 'ATIVO',
+      },
+    });
+
+    if (!usuario) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    return usuario;
   }
 }
