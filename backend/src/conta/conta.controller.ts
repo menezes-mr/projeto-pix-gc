@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Post,
   Patch,
   Body,
@@ -28,5 +29,11 @@ export class ContaController {
     @Body() updateContaDto: UpdateContaDto,
   ) {
     return await this.contaService.atualizarConfiguracoes(contaId, updateContaDto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  async encerrarConta(@Param('id') contaId: string) {
+    return await this.contaService.encerrarConta(contaId);
   }
 }
