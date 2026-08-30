@@ -4,7 +4,6 @@ import {
   IsString,
   MinLength,
   Matches,
-  ValidateIf,
   IsOptional,
 } from 'class-validator';
 
@@ -25,7 +24,6 @@ export class CreateUsuarioDto {
   })
   cpfCnpj!: string;
 
-  @ValidateIf((_, value) => value !== null)
   @IsString({ message: 'O telefone deve ser uma string' })
   @Matches(/^\d{10,11}$/, {
     message:
