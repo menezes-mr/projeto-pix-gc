@@ -2,10 +2,18 @@ import { Module } from '@nestjs/common';
 import { ContaModule } from './conta/conta.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PixKeyModule } from './pix-key/pix-key.module';
+import { PixTransferenciaModule } from './pix-transferencia/pix-transferencia.module';
+import { UsuariosModule } from './usuarios/usuarios.module';
 
 @Module({
-  imports: [PrismaModule, PixKeyModule],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    PrismaModule,
+    ContaModule,
+    UsuariosModule,
+    PixKeyModule,
+    PixTransferenciaModule,
+  ],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}
