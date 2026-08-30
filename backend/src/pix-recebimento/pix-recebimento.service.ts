@@ -21,7 +21,6 @@ export class PixRecebimentoService {
       return transacaoExistente;
     }
 
-    
     const chave = await this.prisma.chavePix.findUnique({
       where: { valorChave: chavePixDestino },
       include: { conta: true },
@@ -49,7 +48,7 @@ export class PixRecebimentoService {
           valor,
           tipoOperacao: 'RECEBIMENTO',
           status: 'CONCLUIDA',
-          contaOrigemId: null, 
+          contaOrigemId: null,
           contaDestinoId: chave.contaId,
           dataEfetivacao: new Date(),
         },
