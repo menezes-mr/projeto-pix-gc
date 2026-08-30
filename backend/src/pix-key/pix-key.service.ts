@@ -54,7 +54,6 @@ export class PixKeyService {
         data: {
           acao: 'CRIACAO DE CHAVE ALEATORIA',
           usuarioId,
-          dataCriacao: date,
         },
       }),
     ]);

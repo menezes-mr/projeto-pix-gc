@@ -1,5 +1,5 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
-import { PixKeyService } from './pix.key.service';
+import { PixKeyService } from './pix-key.service';
 import { CreateRandomKeyDto } from './dto/create.random.key.dto';
 
 @Controller('pix/chaves')
