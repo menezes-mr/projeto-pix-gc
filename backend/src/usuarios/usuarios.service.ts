@@ -83,9 +83,20 @@ export class UsuariosService {
       }
     }
 
-    const usuarioAtualizado = await this.prisma.usuario.update({
-      where: { usuarioId: id },
-      data: updateUsuarioDto,
+    const usuarioAtualizado = await this.prisma.$transaction(async (tx) => {
+      const usuario = await tx.usuario.update({
+        where: { usuarioId: id },
+        data: updateUsuarioDto,
+      });
+
+      await tx.logAtividade.create({
+        data: {
+          acao: 'ATUALIZACAO DE USUARIO',
+          usuarioId: usuario.usuarioId,
+        },
+      });
+
+      return usuario;
     });
 
     delete (usuarioAtualizado as { senha?: string }).senha;
