@@ -52,8 +52,9 @@ export class UsuariosService {
       return usuario;
     });
 
-    delete (novoUsuario as { senha?: string }).senha;
-    return novoUsuario;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { senha: _, ...usuarioSemSenha } = novoUsuario;
+    return usuarioSemSenha;
   }
 
   async update(id: string, updateUsuarioDto: UpdateUsuarioDto) {
