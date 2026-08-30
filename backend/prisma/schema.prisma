@@ -86,7 +86,7 @@ model TransacaoPix {
   dataAgendamento    DateTime?
   dataEfetivacao     DateTime?
 
-  transacaoExternaId String?   @unique   
+  transacaoExternaId String?   @unique  
   transacaoEstornoId String?   @unique
   contaOrigemId      String?             
   contaDestinoId     String?
