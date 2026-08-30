@@ -107,7 +107,6 @@ export class ContaService {
         where: { contaId },
         data: {
           ...(dto.limiteDiarioPix !== undefined && { limiteDiarioPix: dto.limiteDiarioPix }),
-          dataAtualizacao: new Date(),
         },
       });
 
