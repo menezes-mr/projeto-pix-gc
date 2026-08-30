@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Delete,
+  Get,
   Param,
 } from '@nestjs/common';
 import { UsuariosService } from './usuarios.service';
@@ -23,5 +24,10 @@ export class UsuariosController {
   @Delete(':id')
   async remove(@Param('id') id: string) {
     return this.usuariosService.remove(id);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.usuariosService.findOne(id);
   }
 }

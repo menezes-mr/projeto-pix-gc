@@ -101,4 +101,27 @@ export class UsuariosService {
 
     return { mensagem: 'Usuário inativado com sucesso' };
   }
+
+  async findAll() {
+    return this.prisma.usuario.findMany({
+      where: {
+        status: 'ATIVO',
+      },
+    });
+  }
+
+  async findOne(id: string) {
+    const usuario = await this.prisma.usuario.findFirst({
+      where: {
+        usuarioId: id,
+        status: 'ATIVO',
+      },
+    });
+
+    if (!usuario) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    return usuario;
+  }
 }
