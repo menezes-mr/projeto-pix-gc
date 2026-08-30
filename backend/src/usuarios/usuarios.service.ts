@@ -142,7 +142,7 @@ export class UsuariosService {
       this.prisma.logAtividade.create({
         data: {
           usuarioId: id,
-          acao: 'INATIVACAO_USUARIO',
+          acao: 'INATIVACAO DE USUARIO',
         },
       }),
     ]);
