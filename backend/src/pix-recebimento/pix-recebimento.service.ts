@@ -4,10 +4,14 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventEmitter2 } from '@nestjs/event-emitter/dist/eventemitter2';
 
 @Injectable()
 export class PixRecebimentoService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ){}
 
   async receberPix(
     chavePixDestino: string,
@@ -17,6 +21,7 @@ export class PixRecebimentoService {
     const transacaoExistente = await this.prisma.transacaoPix.findFirst({
       where: { transacaoExternaId },
     });
+    
     if (transacaoExistente) {
       return transacaoExistente;
     }

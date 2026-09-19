@@ -5,9 +5,11 @@ import { PixKeyModule } from './pix-key/pix-key.module';
 import { PixRecebimentoModule } from './pix-recebimento/pix-recebimento.module';
 import { PixTransferenciaModule } from './pix-transferencia/pix-transferencia.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
+    EventEmitterModule.forRoot(),
     PrismaModule,
     ContaModule,
     UsuariosModule,
