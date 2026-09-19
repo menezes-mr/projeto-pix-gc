@@ -1,4 +1,11 @@
-import { IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class TransferenciaPixDto {
   @IsString()
@@ -11,4 +18,11 @@ export class TransferenciaPixDto {
   )
   @Min(0.01, { message: 'O valor da transferência deve ser maior que zero' })
   valor!: number;
+
+  @IsOptional()
+  @IsDateString(
+    { strict: true },
+    { message: 'A data de agendamento deve ser uma data válida no formato ISO 8601' },
+  )
+  dataAgendamento?: string;
 }
