@@ -41,7 +41,7 @@ export class PixRecebimentoService {
       throw new BadRequestException('Conta vinculada à chave não está ativa');
     }
 
-    const [, transacao] = await this.prisma.$transaction([
+    const [, transacaoSalva] = await this.prisma.$transaction([
       this.prisma.conta.update({
         where: { contaId: chave.contaId },
         data: { saldo: { increment: valor } },
@@ -60,6 +60,8 @@ export class PixRecebimentoService {
       }),
     ]);
 
-    return transacao;
+    this.eventEmitter.emit('pix.efetivado', transacaoSalva);
+
+    return transacaoSalva;
   }
 }
