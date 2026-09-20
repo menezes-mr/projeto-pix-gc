@@ -17,6 +17,8 @@ import {
 import { ContaService } from './conta.service';
 import { CreateContaDto } from './dto/create-conta.dto';
 import { UpdateContaDto } from './dto/update-conta.dto';
+import { ExtratoQueryDto } from './dto/extrato-query.dto';
+import { JwtAuthGuard, RequestAutenticada } from '../auth/jwt-auth.guard';
 
 @Controller('contas')
 export class ContaController {
