@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateContaDto } from './dto/create-conta.dto';
 import { UpdateContaDto } from './dto/update-conta.dto';
 import { StatusUsuario, StatusConta, PapelUsuarioConta } from '../common/enums/status.enum';
+import { BloquearContaDto } from './dto/bloquear-conta.dto';
 
 @Injectable()
 export class ContaService {
@@ -221,4 +222,49 @@ export class ContaService {
 
     return { mensagem: 'Conta bancária encerrada com sucesso.' };
   }
+
+  async bloquearContaPorFraude(contaId: string, dto: BloquearContaDto) {
+    const conta = await this.prisma.conta.findUnique({
+      where: { contaId },
+    });
+
+    if (!conta) {
+      throw new NotFoundException('Conta bancária não encontrada.');
+    }
+
+    if (conta.status === StatusConta.INATIVA) {
+      throw new BadRequestException(
+        'Não é possível bloquear uma conta que já se encontra encerrada.',
+      );
+    }
+
+    if (conta.status === StatusConta.BLOQUEADA) {
+      throw new BadRequestException('Esta conta já se encontra bloqueada.');
+    }
+
+    return await this.prisma.$transaction(async (tx) => {
+      const contaBloqueada = await tx.conta.update({
+        where: { contaId },
+        data: {
+          status: StatusConta.BLOQUEADA,
+          dataAtualizacao: new Date(),
+        },
+      });
+
+      const detalheMotivo = dto.motivo ? ` | Motivo: ${dto.motivo}` : '';
+
+      await tx.logAtividade.create({
+        data: {
+          usuarioId: dto.usuarioId,
+          acao: `BLOQUEIO_POR_FRAUDE${detalheMotivo}`,
+        },
+      });
+
+      return {
+        mensagem: 'Conta bloqueada por suspeita de fraude com sucesso.',
+        conta: contaBloqueada,
+      };
+    });
+  }
 }
+
