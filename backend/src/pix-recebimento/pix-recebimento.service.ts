@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { EventEmitter2 } from '@nestjs/event-emitter/dist/eventemitter2';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class PixRecebimentoService {
