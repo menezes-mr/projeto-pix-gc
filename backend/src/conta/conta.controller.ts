@@ -8,11 +8,14 @@ import {
   Param,
   HttpCode,
   HttpStatus,
+  UseGuards,
   Req,
 } from '@nestjs/common';
 import { ContaService } from './conta.service';
 import { CreateContaDto } from './dto/create-conta.dto';
 import { UpdateContaDto } from './dto/update-conta.dto';
+import { BloquearContaDto } from './dto/bloquear-conta.dto';
+import { AdminRoleGuard } from '../common/guards/roles.guard'; // Ajuste o caminho conforme sua estrutura
 
 @Controller('contas')
 export class ContaController {
@@ -50,6 +53,16 @@ export class ContaController {
     @Body() updateContaDto: UpdateContaDto,
   ) {
     return await this.contaService.atualizarConfiguracoes(contaId, updateContaDto);
+  }
+
+  @Patch(':id/bloquear')
+  @UseGuards(AdminRoleGuard)
+  @HttpCode(HttpStatus.OK)
+  async bloquearContaPorFraude(
+    @Param('id') contaId: string,
+    @Body() bloquearContaDto: BloquearContaDto,
+  ) {
+    return await this.contaService.bloquearContaPorFraude(contaId, bloquearContaDto);
   }
 
   @Delete(':id')
