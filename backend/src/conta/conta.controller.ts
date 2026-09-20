@@ -1,6 +1,7 @@
 import {
   Controller,
   Delete,
+  Get,
   Post,
   Patch,
   Body,
@@ -15,6 +16,18 @@ import { UpdateContaDto } from './dto/update-conta.dto';
 @Controller('contas')
 export class ContaController {
   constructor(private readonly contaService: ContaService) {}
+
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  async buscarContaPorId(@Param('id') contaId: string) {
+    return await this.contaService.buscarContaPorId(contaId);
+  }
+
+  @Get(':id/saldo')
+  @HttpCode(HttpStatus.OK)
+  async consultarSaldo(@Param('id') contaId: string) {
+    return await this.contaService.consultarSaldo(contaId);
+  }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)

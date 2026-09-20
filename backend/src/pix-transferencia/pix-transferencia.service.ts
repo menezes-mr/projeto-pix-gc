@@ -24,6 +24,19 @@ export class PixTransferenciaService {
     const { contaOrigemId, usuarioId } = contexto;
     const { chavePixDestino } = dto;
     const valor = new Prisma.Decimal(dto.valor);
+    const dataAgendamento =
+      dto.dataAgendamento == null ? null : new Date(dto.dataAgendamento);
+
+    if (dataAgendamento) {
+      const dataInvalida = Number.isNaN(dataAgendamento.getTime());
+      const dataFutura = dataAgendamento.getTime() > Date.now();
+
+      if (dataInvalida || !dataFutura) {
+        throw new BadRequestException(
+          'A data de agendamento deve ser uma data futura válida',
+        );
+      }
+    }
 
     return this.prisma.$transaction(async (tx) => {
       const contaOrigem = await tx.conta.findUnique({
@@ -82,31 +95,34 @@ export class PixTransferenciaService {
         );
       }
 
-      const contaOrigemAtualizada = await tx.conta.update({
-        where: { contaId: contaOrigemId },
-        data: {
-          saldo: { decrement: valor },
-        },
-      });
+      if (!dataAgendamento) {
+        const contaOrigemAtualizada = await tx.conta.update({
+          where: { contaId: contaOrigemId },
+          data: {
+            saldo: { decrement: valor },
+          },
+        });
 
-      if (contaOrigemAtualizada.saldo.lessThan(0)) {
-        throw new BadRequestException('Saldo insuficiente');
+        if (contaOrigemAtualizada.saldo.lessThan(0)) {
+          throw new BadRequestException('Saldo insuficiente');
+        }
+
+        await tx.conta.update({
+          where: { contaId: chaveDestino.contaId },
+          data: {
+            saldo: { increment: valor },
+          },
+        });
       }
-
-      await tx.conta.update({
-        where: { contaId: chaveDestino.contaId },
-        data: {
-          saldo: { increment: valor },
-        },
-      });
 
       const transacao = await tx.transacaoPix.create({
         data: {
           chavePixUtilizada: chavePixDestino,
           valor,
           tipoOperacao: 'TRANSFERENCIA_SAIDA',
-          status: 'EFETIVADA',
-          dataEfetivacao: new Date(),
+          status: dataAgendamento ? 'PENDENTE' : 'EFETIVADA',
+          dataAgendamento,
+          dataEfetivacao: dataAgendamento ? null : new Date(),
           contaOrigemId,
           contaDestinoId: chaveDestino.contaId,
         },
