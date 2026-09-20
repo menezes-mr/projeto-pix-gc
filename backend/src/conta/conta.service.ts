@@ -39,17 +39,73 @@ export class ContaService {
     return conta;
   }
 
-  async consultarSaldo(contaId: string) {
-    const conta = await this.buscarContaPorId(contaId);
+  async consultarSaldo(contaId: string, idUsuarioLogado: string) {
+    // Busca a conta garantindo o id, status ATIVA e pertencimento do usuarioIdLogado
+    const conta = await this.prisma.conta.findFirst({
+      where: {
+        contaId,
+        status: StatusConta.ATIVA,
+        usuarios: {
+          some: {
+            usuarioId: idUsuarioLogado,
+            papel: PapelUsuarioConta.TITULAR,
+          },
+        },
+      },
+      include: {
+        usuarios: {
+          where: { usuarioId: idUsuarioLogado },
+          include: { usuario: true },
+        },
+      },
+    });
 
-    if (conta.status !== StatusConta.ATIVA) {
-      throw new ForbiddenException('Apenas contas ativas podem consultar o saldo.');
+    // Se não encontrar a conta com essas condições, verifica se a conta existe para retornar erro adequado
+    if (!conta) {
+      const contaExistente = await this.prisma.conta.findUnique({
+        where: { contaId },
+        include: {
+          usuarios: {
+            where: { usuarioId: idUsuarioLogado },
+          },
+        },
+      });
+
+      if (!contaExistente) {
+        throw new NotFoundException('Conta bancária não encontrada.');
+      }
+
+      // Se a conta existe mas o usuário não pertence a ela
+      if (!contaExistente.usuarios.length) {
+        throw new ForbiddenException('Acesso negado: Você não é o titular desta conta.');
+      }
+
+      // Se a conta não está ATIVA
+      throw new ForbiddenException('Apenas contas e usuários ativos podem consultar o saldo.');
     }
 
+    // Validação de status do Usuário Titular
+    const usuarioTitular = conta.usuarios[0]?.usuario;
+    if (!usuarioTitular || usuarioTitular.status !== StatusUsuario.ATIVO) {
+      throw new ForbiddenException('Apenas contas e usuários ativos podem consultar o saldo.');
+    }
+
+    // Gravação assíncrona do LogAtividade
+    this.prisma.logAtividade
+      .create({
+        data: {
+          usuarioId: idUsuarioLogado,
+          acao: 'CONSULTA_SALDO',
+        },
+      })
+      .catch((error) => {
+        console.error('Erro ao gravar LogAtividade em CONSULTA_SALDO:', error);
+      });
+
+    // Retorno do JSON apenas com o necessário e conversão de Decimal para Number
     return {
-      contaId: conta.contaId,
-      saldo: conta.saldo,
-      limiteDiarioPix: conta.limiteDiarioPix,
+      saldo: Number(conta.saldo),
+      limiteDiarioPix: Number(conta.limiteDiarioPix),
     };
   }
 

@@ -11,7 +11,6 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
-  UseGuards,
 } from '@nestjs/common';
 import { ContaService } from './conta.service';
 import { CreateContaDto } from './dto/create-conta.dto';
@@ -20,6 +19,18 @@ import { UpdateContaDto } from './dto/update-conta.dto';
 @Controller('contas')
 export class ContaController {
   constructor(private readonly contaService: ContaService) {}
+
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  async buscarContaPorId(@Param('id') contaId: string) {
+    return await this.contaService.buscarContaPorId(contaId);
+  }
+
+  @Get(':id/saldo')
+  @HttpCode(HttpStatus.OK)
+  async consultarSaldo(@Param('id') contaId: string) {
+    return await this.contaService.consultarSaldo(contaId);
+  }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
