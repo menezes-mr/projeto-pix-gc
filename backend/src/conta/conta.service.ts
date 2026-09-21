@@ -278,6 +278,55 @@ export class ContaService {
 
     return { mensagem: 'Conta bancária encerrada com sucesso.' };
   }
+  async listarTransacoes(
+    contaId: string,
+    usuarioIdLogado: string,
+    page: number,
+    limit: number,
+  ) {
+    const conta = await this.prisma.conta.findUnique({ where: { contaId } });
+
+    if (!conta) {
+      throw new NotFoundException('Conta bancária não encontrada.');
+    }
+
+    if (conta.status !== 'ATIVA') {
+      throw new ForbiddenException('Conta não está ativa.');
+    }
+
+    const vinculo = await this.prisma.usuarioConta.findFirst({
+      where: { contaId, usuarioId: usuarioIdLogado, papel: 'TITULAR' },
+    });
+
+    if (!vinculo) {
+      throw new ForbiddenException('Você não tem permissão para acessar o extrato desta conta.');
+    }
+
+    const skip = (page - 1) * limit;
+    const where = {
+      OR: [{ contaOrigemId: contaId }, { contaDestinoId: contaId }],
+    };
+
+    const [transacoes, total] = await this.prisma.$transaction([
+      this.prisma.transacaoPix.findMany({
+        where,
+        orderBy: { dataEfetivacao: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.transacaoPix.count({ where }),
+    ]);
+
+    return {
+      data: transacoes,
+      meta: {
+        paginaAtual: page,
+        totalPaginas: Math.max(1, Math.ceil(total / limit)),
+        totalRegistros: total,
+        limite: limit,
+      },
+    };
+  }
 
   async bloquearContaPorFraude(contaId: string, dto: BloquearContaDto) {
     const conta = await this.prisma.conta.findUnique({
@@ -323,4 +372,3 @@ export class ContaService {
     });
   }
 }
-
