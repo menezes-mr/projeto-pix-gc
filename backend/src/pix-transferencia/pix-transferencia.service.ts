@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransferenciaPixDto } from './dto/transferencia-pix.dto';
@@ -15,7 +16,10 @@ export interface ContextoTransferenciaPix {
 
 @Injectable()
 export class PixTransferenciaService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async transferir(
     contexto: ContextoTransferenciaPix,
@@ -38,7 +42,7 @@ export class PixTransferenciaService {
       }
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const transacao = await this.prisma.$transaction(async (tx) => {
       const contaOrigem = await tx.conta.findUnique({
         where: { contaId: contaOrigemId },
         include: {
@@ -137,5 +141,11 @@ export class PixTransferenciaService {
 
       return transacao;
     });
+
+    if (!dataAgendamento) {
+      this.eventEmitter.emit('pix.efetivado', transacao);
+    }
+
+    return transacao;
   }
 }
