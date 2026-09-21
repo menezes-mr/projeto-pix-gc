@@ -8,10 +8,14 @@ import {
   Param,
   HttpCode,
   HttpStatus,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { ContaService } from './conta.service';
 import { CreateContaDto } from './dto/create-conta.dto';
 import { UpdateContaDto } from './dto/update-conta.dto';
+import { BloquearContaDto } from './dto/bloquear-conta.dto';
+import { AdminRoleGuard } from '../common/guards/roles.guard'; // Ajuste o caminho conforme sua estrutura
 
 @Controller('contas')
 export class ContaController {
@@ -25,8 +29,15 @@ export class ContaController {
 
   @Get(':id/saldo')
   @HttpCode(HttpStatus.OK)
-  async consultarSaldo(@Param('id') contaId: string) {
-    return await this.contaService.consultarSaldo(contaId);
+  async consultarSaldo(@Param('id') contaId: string, @Req() req: any) {
+    // Obtém o usuarioId do token/contexto da requisição (req.user) ou via header/mock
+    const idUsuarioLogado =
+      req.user?.usuarioId ||
+      req.user?.sub ||
+      req.headers['x-usuario-id'] ||
+      'usuario-mock-id';
+
+    return await this.contaService.consultarSaldo(contaId, idUsuarioLogado);
   }
 
   @Post()
@@ -42,6 +53,16 @@ export class ContaController {
     @Body() updateContaDto: UpdateContaDto,
   ) {
     return await this.contaService.atualizarConfiguracoes(contaId, updateContaDto);
+  }
+
+  @Patch(':id/bloquear')
+  @UseGuards(AdminRoleGuard)
+  @HttpCode(HttpStatus.OK)
+  async bloquearContaPorFraude(
+    @Param('id') contaId: string,
+    @Body() bloquearContaDto: BloquearContaDto,
+  ) {
+    return await this.contaService.bloquearContaPorFraude(contaId, bloquearContaDto);
   }
 
   @Delete(':id')
