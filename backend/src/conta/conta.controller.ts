@@ -7,8 +7,6 @@ import {
   Body,
   Param,
   Query,
-  Req,
-  UseGuards,
   HttpCode,
   HttpStatus,
   UseGuards,
@@ -35,14 +33,7 @@ export class ContaController {
   async consultarSaldo(@Param('id') contaId: string) {
     return await this.contaService.consultarSaldo(contaId);
   }
-
-  @Post()
-  @HttpCode(HttpStatus.CREATED)
-  async criarConta(@Body() createContaDto: CreateContaDto) {
-    return await this.contaService.criarConta(createContaDto);
-  }
-
-  @Get(':id/transacoes')
+   @Get(':id/transacoes')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async listarTransacoes(
@@ -57,6 +48,13 @@ export class ContaController {
       query.limit,
     );
   }
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  async criarConta(@Body() createContaDto: CreateContaDto) {
+    return await this.contaService.criarConta(createContaDto);
+  }
+
+ 
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
