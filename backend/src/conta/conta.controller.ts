@@ -11,14 +11,14 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
-  UseGuards,
-  Req,
 } from '@nestjs/common';
 import { ContaService } from './conta.service';
 import { CreateContaDto } from './dto/create-conta.dto';
 import { UpdateContaDto } from './dto/update-conta.dto';
 import { ExtratoQueryDto } from './dto/extrato-query.dto';
 import { JwtAuthGuard, RequestAutenticada } from '../auth/jwt-auth.guard';
+import { BloquearContaDto } from './dto/bloquear-conta.dto';
+import { AdminRoleGuard } from '../common/guards/roles.guard';
 
 @Controller('contas')
 export class ContaController {
@@ -32,8 +32,15 @@ export class ContaController {
 
   @Get(':id/saldo')
   @HttpCode(HttpStatus.OK)
-  async consultarSaldo(@Param('id') contaId: string) {
-    return await this.contaService.consultarSaldo(contaId);
+  async consultarSaldo(@Param('id') contaId: string, @Req() req: any) {
+    
+    const idUsuarioLogado =
+      req.user?.usuarioId ||
+      req.user?.sub ||
+      req.headers['x-usuario-id'] ||
+      'usuario-mock-id';
+
+    return await this.contaService.consultarSaldo(contaId, idUsuarioLogado);
   }
 
   @Post()
