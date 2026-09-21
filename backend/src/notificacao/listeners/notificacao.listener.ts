@@ -1,18 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificacaoService } from '../notificacao.service';
+import type { TransacaoPix } from '@prisma/client';
 
 @Injectable()
 export class NotificacaoListener {
   constructor(private readonly notificacaoService: NotificacaoService) {}
 
   @OnEvent('pix.efetivado', { async: true })
-  async handlePixEfetivadoEvent(event: {
-    transacaoId: string;
-    valor: number;
-    remetenteId: string;
-    destinatarioId: string;
-  }) {
-    await this.notificacaoService.processarNotificacaoPix(event);
+  async handlePixEfetivado(transacao: TransacaoPix) {
+    await this.notificacaoService.processarNotificacaoPix(transacao);
   }
 }
