@@ -1,22 +1,27 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { User, Lock, Mail, Phone, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { PasswordStrength } from "./password-strength";
 import { cn, formatCPFOrCNPJ, formatPhone } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth-context";
 
 type AuthMode = "login" | "register";
 
 export function AuthContainer() {
+  const router = useRouter();
+  const { login } = useAuth();
   const [mode, setMode] = useState<AuthMode>("login");
   
   const [showPassword, setShowPassword] = useState(false);
   const [loginIdentifier, setLoginIdentifier] = useState("");
   
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [document, setDocument] = useState("");
   const [phone, setPhone] = useState("");
   const [notificationSms, setNotificationSms] = useState(false);
@@ -97,7 +102,11 @@ export function AuthContainer() {
               />
             </div>
 
-            <Button className="mt-2 text-base h-12">
+            <Button className="mt-2 text-base h-12" onClick={() => {
+              // Basic mock login
+              login({ name: loginIdentifier.includes('@') ? loginIdentifier.split('@')[0] : "Usuário" });
+              router.push("/");
+            }}>
               Entrar →
             </Button>
             
@@ -113,6 +122,8 @@ export function AuthContainer() {
               label="Nome Completo"
               placeholder="Ex: Ana Carolina Silva"
               iconLeft={<User className="w-5 h-5" />}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
             />
 
             <Input
@@ -188,7 +199,12 @@ export function AuthContainer() {
               </div>
             </div>
 
-            <Button className="mt-4 text-base h-12">
+            <Button className="mt-4 text-base h-12" onClick={() => {
+              // Extract first name from full name or default
+              const firstName = name ? name.split(" ")[0] : "Usuário";
+              login({ name: firstName, document, phone });
+              router.push("/");
+            }}>
               Criar Conta ⊕
             </Button>
             
