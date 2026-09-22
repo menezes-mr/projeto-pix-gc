@@ -134,6 +134,7 @@ export class PixTransferenciaService {
           ...(dataAgendamento ? { dataAgendamento } : {}),
           contaOrigemId,
           contaDestinoId: chaveDestino.contaId,
+          usuarioSolicitanteId: usuarioId,
         },
         tx,
       );

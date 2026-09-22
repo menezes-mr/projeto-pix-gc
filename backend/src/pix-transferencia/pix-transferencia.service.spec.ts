@@ -50,6 +50,7 @@ describe('PixTransferenciaService com HistoricoPixService', () => {
     status: StatusTransacao.EFETIVADA,
     contaOrigemId: contexto.contaOrigemId,
     contaDestinoId: 'conta-destino',
+    usuarioSolicitanteId: contexto.usuarioId,
   };
   const transacao: TransacaoPix = {
     ...dadosHistorico,
