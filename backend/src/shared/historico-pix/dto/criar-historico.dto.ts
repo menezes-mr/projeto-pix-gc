@@ -10,4 +10,5 @@ export interface CriarHistoricoDto {
   contaDestinoId?: string;
   chavePixUtilizada?: string;
   dataAgendamento?: Date;
+  usuarioSolicitanteId?: string;
 }

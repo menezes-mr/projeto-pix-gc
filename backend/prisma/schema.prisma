@@ -25,6 +25,7 @@ model Usuario {
   contas          UsuarioConta[]
   contatos        ContatoPix[]
   logs            LogAtividade[]
+  transacoesSolicitadas TransacaoPix[]
 }
 
 model Conta {
@@ -90,11 +91,15 @@ model TransacaoPix {
   transacaoEstornoId String?   @unique
   contaOrigemId      String?             
   contaDestinoId     String?
+  usuarioSolicitanteId String?
 
   contaOrigem        Conta?        @relation("ContaOrigem", fields: [contaOrigemId], references: [contaId])
   contaDestino       Conta?        @relation("ContaDestino", fields: [contaDestinoId], references: [contaId])
+  usuarioSolicitante Usuario?      @relation(fields: [usuarioSolicitanteId], references: [usuarioId], onDelete: SetNull)
   transacaoEstorno   TransacaoPix? @relation("Estorno", fields: [transacaoEstornoId], references: [transacaoId])
   estornoDe          TransacaoPix? @relation("Estorno")
+
+  @@index([status, dataAgendamento])
 }
 model LogAtividade {
   logId     String   @id @default(uuid())
