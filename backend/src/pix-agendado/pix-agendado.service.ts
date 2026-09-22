@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma, TransacaoPix } from '@prisma/client';
 import {
   PapelUsuarioConta,
@@ -20,6 +21,34 @@ export class PixAgendadoService {
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  @Cron(CronExpression.EVERY_MINUTE, {
+    name: 'executar-pix-agendados',
+    waitForCompletion: true,
+  })
+  async processarPendentes() {
+    const agora = new Date();
+    const pendentes = await this.prisma.transacaoPix.findMany({
+      where: {
+        status: StatusTransacao.PENDENTE,
+        dataAgendamento: { lte: agora },
+      },
+      select: { transacaoId: true },
+      orderBy: [{ dataAgendamento: 'asc' }, { transacaoId: 'asc' }],
+    });
+
+    for (const { transacaoId } of pendentes) {
+      try {
+        await this.executar(transacaoId, agora);
+      } catch (error) {
+        // Erros técnicos mantêm PENDENTE para nova tentativa no próximo ciclo.
+        this.logger.error(
+          `Erro ao executar PIX agendado ${transacaoId}`,
+          error,
+        );
+      }
+    }
+  }
 
   async executar(transacaoId: string, agora = new Date()) {
     const resultado = await this.prisma.$transaction(async (tx) => {

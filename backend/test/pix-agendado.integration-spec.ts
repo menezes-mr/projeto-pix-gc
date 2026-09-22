@@ -338,4 +338,33 @@ describe('Execução de PIX agendado no PostgreSQL', () => {
     }
     expect((await service.executar(pix.transacaoId))?.status).toBe('EFETIVADA');
   });
+
+  it('processa o lote vencido, mantém futuros pendentes e segue após falha de saldo', async () => {
+    const { origem, destino, pix, dadosPix } = await preparar(30, 40);
+    const valido = await prisma.transacaoPix.create({
+      data: { ...dadosPix, valor: 10 },
+    });
+    const futuro = await prisma.transacaoPix.create({
+      data: { ...dadosPix, dataAgendamento: new Date(Date.now() + 86_400_000) },
+    });
+    const cancelado = await prisma.transacaoPix.create({
+      data: { ...dadosPix, status: 'CANCELADA' },
+    });
+
+    await service.processarPendentes();
+
+    for (const [transacaoId, status] of [
+      [pix.transacaoId, 'FALHA'],
+      [valido.transacaoId, 'EFETIVADA'],
+      [futuro.transacaoId, 'PENDENTE'],
+      [cancelado.transacaoId, 'CANCELADA'],
+    ]) {
+      const salvo = await prisma.transacaoPix.findUniqueOrThrow({
+        where: { transacaoId },
+      });
+      expect(salvo.status).toBe(status);
+    }
+    expect(await saldos(origem.contaId, destino.contaId)).toEqual([20, 10]);
+    expect(await prisma.logAtividade.count()).toBe(1);
+  });
 });

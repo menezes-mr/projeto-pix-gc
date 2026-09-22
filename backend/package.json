@@ -85,7 +85,7 @@
       ]
     },
     "transformIgnorePatterns": [
-      "node_modules/(?!@nestjs/(event-emitter|jwt)/)"
+      "node_modules/(?!@nestjs/(event-emitter|jwt|schedule)/)"
     ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
