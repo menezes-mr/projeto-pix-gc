@@ -23,6 +23,7 @@ services:
     container_name: pix_backend
     environment:
       - DATABASE_URL=postgresql://pix_user:pix_password@db:5432/pix_db?schema=public
+      - DIRECT_URL=postgresql://pix_user:pix_password@db:5432/pix_db?schema=public
       - JWT_SECRET=chave-secreta-projeto-pix-dev
     ports:
       - "3333:3333"
