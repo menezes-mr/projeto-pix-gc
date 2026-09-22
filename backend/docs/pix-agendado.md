@@ -56,6 +56,43 @@ Referências: [agendamento no NestJS](https://docs.nestjs.com/techniques/task-sc
 [bloqueios no PostgreSQL](https://www.postgresql.org/docs/current/explicit-locking.html)
 e [savepoints](https://www.postgresql.org/docs/current/sql-savepoint.html).
 
+## Cancelamento de agendamentos
+
+```http
+PATCH /pix/agendamentos/:id/cancelar
+Authorization: Bearer <token>
+```
+
+A requisição não precisa de corpo. A identidade vem exclusivamente do JWT.
+Qualquer usuário ativo que seja titular da conta de origem pode cancelar,
+mesmo que outro titular tenha feito o agendamento. Dependentes, usuários sem
+vínculo e titulares inativos/bloqueados recebem HTTP 403.
+
+Somente `PENDENTE` pode passar para `CANCELADA`. Agendamentos vencidos ainda
+pendentes também podem ser cancelados. O estado da conta não impede o
+cancelamento por um titular ativo, pois a operação não movimenta dinheiro.
+
+O registro é preservado e os saldos não mudam. A atualização de status e o log
+`CANCELAMENTO_PIX_AGENDADO`, associado ao usuário que cancelou, são atômicos.
+Se a gravação da auditoria falhar, o cancelamento também é desfeito.
+
+O cancelamento usa o mesmo bloqueio de registro do executor automático. Se a
+execução vencer a disputa e concluir, o cancelamento encontra `EFETIVADA` e
+falha; se o cancelamento vencer, o executor ignora esse PIX. Duas solicitações
+de cancelamento não geram dois logs de sucesso.
+
+| HTTP | Resultado                                                             |
+| ---- | --------------------------------------------------------------------- |
+| 200  | `{ mensagem: "Transação PIX cancelada com sucesso", transacao: ... }` |
+| 400  | Apenas transações pendentes podem ser canceladas.                     |
+| 401  | Token ausente ou inválido.                                            |
+| 403  | Usuário não é titular da origem ou não está ativo.                    |
+| 404  | Transação PIX não encontrada.                                         |
+
+O campo `transacao` contém os dados atualizados do registro, sem os dados
+dos usuários e vínculos usados internamente para verificar a autorização.
+O cancelamento não emite `pix.efetivado` nem cria outro registro de PIX.
+
 ## Validação
 
 ```bash
@@ -73,3 +110,8 @@ identificação do solicitante, datas futuras e vencidas, execução repetida,
 concorrência entre duas conexões, disputa pelo saldo, transferências em sentidos
 opostos e falha técnica depois de movimentar saldos. Os testes do Cron verificam
 o intervalo de um minuto, a ausência de sobreposição e a continuação após erro.
+
+Os testes de cancelamento cobrem posse, atividade do usuário, estados inválidos,
+preservação dos saldos, auditoria, rollback e disputa com o executor. Os testes
+HTTP usam o guard real e tokens JWT assinados para validar a rota e os códigos
+de resposta, incluindo tentativas de trocar a identidade pelo corpo da requisição.

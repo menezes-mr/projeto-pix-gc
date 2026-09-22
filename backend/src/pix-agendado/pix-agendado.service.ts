@@ -1,4 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma, TransacaoPix } from '@prisma/client';
@@ -21,6 +27,68 @@ export class PixAgendadoService {
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  async cancelar(transacaoId: string, usuarioId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      // Compartilha o bloqueio com o executor: o estado é validado após adquiri-lo.
+      const registros = await tx.$queryRaw<Array<{ transacaoId: string }>>`
+        SELECT "transacaoId" FROM "TransacaoPix"
+        WHERE "transacaoId" = ${transacaoId}
+        FOR UPDATE
+      `;
+      if (registros.length === 0) {
+        throw new NotFoundException('Transação PIX não encontrada');
+      }
+
+      // Mantém a titularidade e o status do usuário estáveis até o commit.
+      await tx.$queryRaw`
+        SELECT u."usuarioId" FROM "Usuario" u
+        JOIN "UsuarioConta" v ON v."usuarioId" = u."usuarioId"
+        JOIN "TransacaoPix" p ON p."contaOrigemId" = v."contaId"
+        WHERE p."transacaoId" = ${transacaoId} AND u."usuarioId" = ${usuarioId}
+        FOR SHARE OF u, v
+      `;
+      const transacao = await tx.transacaoPix.findUniqueOrThrow({
+        where: { transacaoId },
+        include: {
+          contaOrigem: {
+            include: {
+              usuarios: {
+                where: { usuarioId },
+                include: { usuario: { select: { status: true } } },
+              },
+            },
+          },
+        },
+      });
+      const vinculo = transacao.contaOrigem?.usuarios[0];
+      if (vinculo?.papel !== String(PapelUsuarioConta.TITULAR)) {
+        throw new ForbiddenException(
+          'O usuário não é titular da conta de origem',
+        );
+      }
+      if (vinculo.usuario.status !== String(StatusUsuario.ATIVO)) {
+        throw new ForbiddenException(
+          'O usuário precisa estar ativo para cancelar',
+        );
+      }
+      if (transacao.status !== String(StatusTransacao.PENDENTE)) {
+        throw new BadRequestException(
+          'Apenas transações pendentes podem ser canceladas',
+        );
+      }
+
+      const cancelada = await tx.transacaoPix.update({
+        where: { transacaoId },
+        data: { status: StatusTransacao.CANCELADA },
+      });
+      await tx.logAtividade.create({
+        data: { acao: 'CANCELAMENTO_PIX_AGENDADO', usuarioId },
+      });
+
+      return cancelada;
+    });
+  }
 
   @Cron(CronExpression.EVERY_MINUTE, {
     name: 'executar-pix-agendados',

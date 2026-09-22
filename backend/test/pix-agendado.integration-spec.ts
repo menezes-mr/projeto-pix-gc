@@ -15,7 +15,7 @@ const schema = `pix_agendado_test_${randomUUID().replaceAll('-', '')}`;
 const url = new URL(databaseUrl);
 url.searchParams.set('schema', schema);
 
-describe('Execução de PIX agendado no PostgreSQL', () => {
+describe('PIX agendado no PostgreSQL', () => {
   const prisma = new PrismaService({ datasources: { db: { url: url.href } } });
   const outroPrisma = new PrismaService({
     datasources: { db: { url: url.href } },
@@ -366,5 +366,239 @@ describe('Execução de PIX agendado no PostgreSQL', () => {
     }
     expect(await saldos(origem.contaId, destino.contaId)).toEqual([20, 10]);
     expect(await prisma.logAtividade.count()).toBe(1);
+  });
+
+  describe('Cancelamento', () => {
+    it.each(['futuro', 'vencido'])(
+      'cancela PIX pendente %s, preserva saldos e registra a auditoria',
+      async (prazo) => {
+        const { origem, destino, solicitante, pix } = await preparar();
+        if (prazo === 'futuro') {
+          await prisma.transacaoPix.update({
+            where: { transacaoId: pix.transacaoId },
+            data: { dataAgendamento: new Date(Date.now() + 86_400_000) },
+          });
+        }
+
+        const cancelada = await service.cancelar(
+          pix.transacaoId,
+          solicitante.usuarioId,
+        );
+
+        expect(cancelada.status).toBe('CANCELADA');
+        expect(cancelada.transacaoId).toBe(pix.transacaoId);
+        expect(cancelada.dataEfetivacao).toBeNull();
+        expect(await prisma.transacaoPix.count()).toBe(1);
+        expect(await saldos(origem.contaId, destino.contaId)).toEqual([100, 0]);
+        const logs = await prisma.logAtividade.findMany();
+        expect(logs).toHaveLength(1);
+        expect(logs[0].acao).toBe('CANCELAMENTO_PIX_AGENDADO');
+        expect(logs[0].usuarioId).toBe(solicitante.usuarioId);
+        expect(await outroService.executar(pix.transacaoId)).toBeNull();
+        expect(emitir).not.toHaveBeenCalled();
+      },
+    );
+
+    it('recusa usuário titular apenas da conta de destino', async () => {
+      const { origem, destino, destinatario, pix } = await preparar();
+      await expect(
+        service.cancelar(pix.transacaoId, destinatario.usuarioId),
+      ).rejects.toMatchObject({ status: 403 });
+      expect(await saldos(origem.contaId, destino.contaId)).toEqual([100, 0]);
+      expect(await prisma.logAtividade.count()).toBe(0);
+      expect(
+        (
+          await prisma.transacaoPix.findUniqueOrThrow({
+            where: { transacaoId: pix.transacaoId },
+          })
+        ).status,
+      ).toBe('PENDENTE');
+    });
+
+    it('recusa dependente da origem, mesmo sendo o solicitante original', async () => {
+      const { origem, solicitante, pix } = await preparar();
+      await prisma.usuarioConta.update({
+        where: {
+          usuarioId_contaId: {
+            contaId: origem.contaId,
+            usuarioId: solicitante.usuarioId,
+          },
+        },
+        data: { papel: 'DEPENDENTE' },
+      });
+      await expect(
+        service.cancelar(pix.transacaoId, solicitante.usuarioId),
+      ).rejects.toMatchObject({ status: 403 });
+      expect(await prisma.logAtividade.count()).toBe(0);
+    });
+
+    it('permite outro titular ativo da origem e registra quem cancelou', async () => {
+      const { origem, destinatario, solicitante, pix } = await preparar();
+      await prisma.usuarioConta.create({
+        data: {
+          contaId: origem.contaId,
+          usuarioId: destinatario.usuarioId,
+          papel: 'TITULAR',
+        },
+      });
+      const cancelada = await service.cancelar(
+        pix.transacaoId,
+        destinatario.usuarioId,
+      );
+      expect(cancelada.status).toBe('CANCELADA');
+      expect(cancelada.usuarioSolicitanteId).toBe(solicitante.usuarioId);
+      const logs = await prisma.logAtividade.findMany();
+      expect(logs).toHaveLength(1);
+      expect(logs[0].usuarioId).toBe(destinatario.usuarioId);
+    });
+
+    it.each(['INATIVO', 'BLOQUEADO'])(
+      'recusa titular com status %s',
+      async (status) => {
+        const { solicitante, pix } = await preparar();
+        await prisma.usuario.update({
+          where: { usuarioId: solicitante.usuarioId },
+          data: { status },
+        });
+        await expect(
+          service.cancelar(pix.transacaoId, solicitante.usuarioId),
+        ).rejects.toMatchObject({ status: 403 });
+        expect(await prisma.logAtividade.count()).toBe(0);
+      },
+    );
+
+    it('permite ao titular ativo cancelar mesmo quando a conta está bloqueada', async () => {
+      const { origem, solicitante, pix } = await preparar();
+      await prisma.conta.update({
+        where: { contaId: origem.contaId },
+        data: { status: 'BLOQUEADA' },
+      });
+      expect(
+        (await service.cancelar(pix.transacaoId, solicitante.usuarioId)).status,
+      ).toBe('CANCELADA');
+    });
+
+    it.each(['EFETIVADA', 'FALHA', 'CANCELADA'])(
+      'recusa estado %s sem alterar o registro',
+      async (status) => {
+        const { origem, destino, solicitante, pix } = await preparar();
+        await prisma.transacaoPix.update({
+          where: { transacaoId: pix.transacaoId },
+          data: { status },
+        });
+        await expect(
+          service.cancelar(pix.transacaoId, solicitante.usuarioId),
+        ).rejects.toMatchObject({
+          status: 400,
+          message: 'Apenas transações pendentes podem ser canceladas',
+        });
+        expect(
+          (
+            await prisma.transacaoPix.findUniqueOrThrow({
+              where: { transacaoId: pix.transacaoId },
+            })
+          ).status,
+        ).toBe(status);
+        expect(await saldos(origem.contaId, destino.contaId)).toEqual([100, 0]);
+        expect(await prisma.logAtividade.count()).toBe(0);
+      },
+    );
+
+    it('retorna 404 quando o PIX não existe', async () => {
+      await expect(
+        service.cancelar(randomUUID(), randomUUID()),
+      ).rejects.toMatchObject({
+        status: 404,
+      });
+    });
+
+    it('valida a posse antes de informar um estado não cancelável', async () => {
+      const { destinatario, pix } = await preparar();
+      await prisma.transacaoPix.update({
+        where: { transacaoId: pix.transacaoId },
+        data: { status: 'EFETIVADA' },
+      });
+      await expect(
+        service.cancelar(pix.transacaoId, destinatario.usuarioId),
+      ).rejects.toMatchObject({ status: 403 });
+    });
+
+    it('desfaz o cancelamento quando a gravação do log falha', async () => {
+      const { origem, destino, solicitante, pix } = await preparar();
+      await prisma.$executeRaw`
+        CREATE FUNCTION falhar_log_cancelamento() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN RAISE EXCEPTION 'Falha técnica simulada'; END; $$
+      `;
+      await prisma.$executeRaw`
+        CREATE TRIGGER falhar_log_cancelamento BEFORE INSERT ON "LogAtividade"
+        FOR EACH ROW EXECUTE FUNCTION falhar_log_cancelamento()
+      `;
+      try {
+        await expect(
+          service.cancelar(pix.transacaoId, solicitante.usuarioId),
+        ).rejects.toThrow();
+        expect(
+          (
+            await prisma.transacaoPix.findUniqueOrThrow({
+              where: { transacaoId: pix.transacaoId },
+            })
+          ).status,
+        ).toBe('PENDENTE');
+        expect(await saldos(origem.contaId, destino.contaId)).toEqual([100, 0]);
+        expect(await prisma.logAtividade.count()).toBe(0);
+      } finally {
+        await prisma.$executeRaw`DROP FUNCTION falhar_log_cancelamento() CASCADE`;
+      }
+    });
+
+    it('dois cancelamentos concorrentes geram apenas uma alteração e um log', async () => {
+      const { solicitante, pix } = await preparar();
+      const resultados = await Promise.allSettled([
+        service.cancelar(pix.transacaoId, solicitante.usuarioId),
+        outroService.cancelar(pix.transacaoId, solicitante.usuarioId),
+      ]);
+      expect(resultados.filter((r) => r.status === 'fulfilled')).toHaveLength(
+        1,
+      );
+      expect(resultados.filter((r) => r.status === 'rejected')).toHaveLength(1);
+      expect(await prisma.logAtividade.count()).toBe(1);
+    });
+
+    it.each(['cancelar', 'executar'] as const)(
+      'mantém um único resultado na disputa com o executor, iniciando por %s',
+      async (primeiro) => {
+        const { origem, destino, solicitante, pix } = await preparar();
+        const cancelar = () =>
+          service.cancelar(pix.transacaoId, solicitante.usuarioId);
+        const executar = () => outroService.executar(pix.transacaoId);
+        const operacoes =
+          primeiro === 'cancelar' ? [cancelar, executar] : [executar, cancelar];
+        const resultados = await Promise.allSettled(
+          operacoes.map((operacao) => operacao()),
+        );
+        const salvo = await prisma.transacaoPix.findUniqueOrThrow({
+          where: { transacaoId: pix.transacaoId },
+        });
+        const logs = await prisma.logAtividade.findMany();
+        expect(logs).toHaveLength(1);
+        if (salvo.status === 'CANCELADA') {
+          expect(await saldos(origem.contaId, destino.contaId)).toEqual([
+            100, 0,
+          ]);
+          expect(logs[0].acao).toBe('CANCELAMENTO_PIX_AGENDADO');
+          expect(resultados.every((r) => r.status === 'fulfilled')).toBe(true);
+          expect(emitir).not.toHaveBeenCalled();
+        } else {
+          expect(salvo.status).toBe('EFETIVADA');
+          expect(await saldos(origem.contaId, destino.contaId)).toEqual([
+            60, 40,
+          ]);
+          expect(logs[0].acao).toBe('EXECUCAO_PIX_AGENDADO');
+          const rejeitado = resultados.find((r) => r.status === 'rejected');
+          expect(rejeitado).toMatchObject({ reason: { status: 400 } });
+          expect(emitir).toHaveBeenCalledTimes(1);
+        }
+      },
+    );
   });
 });
