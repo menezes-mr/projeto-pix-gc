@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Min } from 'class-validator';
+import { IsDateString, IsInt, IsOptional, Min } from 'class-validator';
 
 export class ExtratoQueryDto {
   @IsOptional()
@@ -13,4 +13,12 @@ export class ExtratoQueryDto {
   @IsInt()
   @Min(1)
   limit: number = 20;
+
+  @IsOptional()
+  @IsDateString()
+  dataInicio?: string;
+
+  @IsOptional()
+  @IsDateString()
+  dataFim?: string;
 }

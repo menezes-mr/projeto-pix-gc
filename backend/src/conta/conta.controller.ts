@@ -53,6 +53,8 @@ export class ContaController {
       req.user.usuarioId,
       query.page,
       query.limit,
+      query.dataInicio,
+      query.dataFim,
     );
   }
   @Post()

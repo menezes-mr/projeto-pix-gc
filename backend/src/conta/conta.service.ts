@@ -278,11 +278,23 @@ export class ContaService {
 
     return { mensagem: 'Conta bancária encerrada com sucesso.' };
   }
+  private ajustarFimDoDia(data: string): Date {
+    // Se já vier com horário (ex: 2023-10-01T15:00:00Z), respeita como está.
+    // Se vier só a data (ex: 2023-10-01), estende até o fim do dia (23:59:59.999)
+    // pra não perder transações efetivadas no próprio dia final do intervalo.
+    if (data.includes('T')) {
+      return new Date(data);
+    }
+    return new Date(`${data}T23:59:59.999Z`);
+  }
+
   async listarTransacoes(
     contaId: string,
     usuarioIdLogado: string,
     page: number,
     limit: number,
+    dataInicio?: string,
+    dataFim?: string,
   ) {
     const conta = await this.prisma.conta.findUnique({ where: { contaId } });
 
@@ -302,10 +314,26 @@ export class ContaService {
       throw new ForbiddenException('Você não tem permissão para acessar o extrato desta conta.');
     }
 
+    const dataFiltro: { gte?: Date; lte?: Date } = {};
+    if (dataInicio) {
+      dataFiltro.gte = new Date(dataInicio);
+    }
+    if (dataFim) {
+      dataFiltro.lte = this.ajustarFimDoDia(dataFim);
+    }
+
+    if (dataFiltro.gte && dataFiltro.lte && dataFiltro.lte < dataFiltro.gte) {
+      throw new BadRequestException('dataFim não pode ser anterior a dataInicio.');
+    }
+
     const skip = (page - 1) * limit;
-    const where = {
+    const where: any = {
       OR: [{ contaOrigemId: contaId }, { contaDestinoId: contaId }],
     };
+
+    if (Object.keys(dataFiltro).length > 0) {
+      where.AND = [{ dataEfetivacao: dataFiltro }];
+    }
 
     const [transacoes, total] = await this.prisma.$transaction([
       this.prisma.transacaoPix.findMany({
