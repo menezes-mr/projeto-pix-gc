@@ -50,7 +50,6 @@ export function StepValue({ recipient, onNext, onBack }: StepValueProps) {
   return (
     <div className="flex flex-col gap-4 p-6">
       
-      {/* Saldo Block */}
       <div className="bg-gray-900 rounded-xl p-6 text-white relative overflow-hidden flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-gray-400 text-xs font-bold tracking-wider">
@@ -65,7 +64,6 @@ export function StepValue({ recipient, onNext, onBack }: StepValueProps) {
         </div>
       </div>
 
-      {/* Bloco com Destinatário Validado */}
       <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 flex items-center justify-between">
         <div className="flex items-start gap-3">
           <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600 mt-0.5">
@@ -82,7 +80,6 @@ export function StepValue({ recipient, onNext, onBack }: StepValueProps) {
         </button>
       </div>
 
-      {/* Campo de valor */}
       <div className="flex flex-col items-center gap-4 py-4">
         <span className="text-sm font-medium text-gray-600">Qual o valor da transferência?</span>
         
@@ -119,7 +116,6 @@ export function StepValue({ recipient, onNext, onBack }: StepValueProps) {
         </div>
       </div>
 
-      {/* Date Block */}
       <div className="border border-gray-200 bg-gray-50/50 rounded-xl p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-white border border-gray-200 rounded-lg text-gray-500">

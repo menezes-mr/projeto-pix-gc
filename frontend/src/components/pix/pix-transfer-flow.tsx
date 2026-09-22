@@ -94,7 +94,6 @@ export function PixTransferFlow() {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
       
-      {/* Progress Header */}
       <div className="p-6 border-b border-gray-100 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -117,7 +116,6 @@ export function PixTransferFlow() {
         </div>
       </div>
 
-      {/* Steps Content */}
       <div className="flex-1">
         {step === 1 && <StepKey onNext={handleNextKey} />}
         {step === 2 && recipient && <StepValue recipient={recipient} onNext={handleNextValue} onBack={() => setStep(1)} />}

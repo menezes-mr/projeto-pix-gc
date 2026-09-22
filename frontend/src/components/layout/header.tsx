@@ -20,7 +20,6 @@ export function Header() {
 
   return (
     <header className="w-full bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
-      {/* Esquerda: Logo e Saudação */}
       <div className="flex items-center gap-4">
         <div className="w-10 h-10 bg-slate-900 rounded-lg flex items-center justify-center text-white font-bold text-xl">
           {user?.name?.charAt(0).toUpperCase() || 'U'}
@@ -31,7 +30,6 @@ export function Header() {
         </div>
       </div>
 
-      {/* Centro: Navegação */}
       <nav className="hidden md:flex items-center gap-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
@@ -54,7 +52,6 @@ export function Header() {
         })}
       </nav>
 
-      {/* Direita: Notificações */}
       <div className="flex items-center">
         <button className="relative p-2 rounded-full bg-gray-50 hover:bg-gray-100 transition-colors text-gray-600">
           <Bell className="w-5 h-5" />

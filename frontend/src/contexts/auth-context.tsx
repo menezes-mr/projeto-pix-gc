@@ -46,7 +46,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Tenta carregar do localStorage no primeiro render (client-side)
     const storedToken = localStorage.getItem("pix_token");
     const storedUser = localStorage.getItem("pix_user");
     
