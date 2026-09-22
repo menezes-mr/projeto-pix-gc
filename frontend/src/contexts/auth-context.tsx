@@ -24,35 +24,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Tenta carregar do localStorage no primeiro render (client-side)
-    const stored = localStorage.getItem("pix_user");
-    if (stored) {
+    const storedToken = localStorage.getItem("pix_token");
+    const storedUser = localStorage.getItem("pix_user");
+    
+    if (storedToken && storedUser) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setUser(JSON.parse(stored));
+      setUser(JSON.parse(storedUser));
     } else {
-      // Mock inicial se não tiver nada
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setUser({
-        name: "João Silva",
-        balance: 5000,
-      });
+      setUser(null);
     }
   }, []);
 
-  const login = (userData: Partial<User>) => {
-    const newUser = {
-      name: userData.name || "Usuário",
-      document: userData.document,
-      email: userData.email,
-      password: userData.password,
-      balance: userData.balance ?? 5000,
-    };
-    setUser(newUser);
-    localStorage.setItem("pix_user", JSON.stringify(newUser));
+  const login = async (userData: any) => {
+    try {
+      let loginData;
+      let isRegistering = !!userData.document && !!userData.phone && !!userData.name;
+
+      // Se for registro, cria o usuário antes de logar
+      if (isRegistering) {
+        // Assume document in userData
+        const { api } = await import('@/lib/api');
+        await api.post('/usuarios', {
+          nomeCompleto: userData.name,
+          email: `${userData.document.replace(/\D/g, '')}@email.com`, // mock email fallback
+          cpfCnpj: userData.document,
+          telefone: userData.phone,
+          senha: userData.password,
+        });
+        loginData = { identificador: userData.document, senha: userData.password };
+      } else {
+        loginData = { identificador: userData.document, senha: userData.password };
+      }
+
+      const { api } = await import('@/lib/api');
+      const response = await api.post('/auth/login', loginData);
+      
+      const { access_token, usuario } = response.data;
+      
+      const mappedUser = {
+        name: usuario.nome,
+        document: usuario.documento,
+        email: usuario.email,
+        phone: usuario.telefone,
+        password: userData.password, // guardado no state local apenas
+        balance: usuario.saldo,
+      };
+
+      setUser(mappedUser);
+      localStorage.setItem("pix_token", access_token);
+      localStorage.setItem("pix_user", JSON.stringify(mappedUser));
+    } catch (error: any) {
+      console.error("Erro no login/registro:", error);
+      throw error;
+    }
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem("pix_user");
+    localStorage.removeItem("pix_token");
   };
 
   return (
