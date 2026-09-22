@@ -6,6 +6,7 @@ interface User {
   name: string;
   document?: string;
   email?: string;
+  phone?: string;
   balance: number;
 }
 
@@ -24,9 +25,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Tenta carregar do localStorage no primeiro render (client-side)
     const stored = localStorage.getItem("pix_user");
     if (stored) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUser(JSON.parse(stored));
     } else {
       // Mock inicial se não tiver nada
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUser({
         name: "João Silva",
         balance: 5000,
