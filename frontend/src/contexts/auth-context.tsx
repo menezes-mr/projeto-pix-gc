@@ -7,6 +7,7 @@ interface User {
   document?: string;
   email?: string;
   phone?: string;
+  password?: string;
   balance: number;
 }
 
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       name: userData.name || "Usuário",
       document: userData.document,
       email: userData.email,
+      password: userData.password,
       balance: userData.balance ?? 5000,
     };
     setUser(newUser);

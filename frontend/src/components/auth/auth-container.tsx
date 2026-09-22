@@ -200,9 +200,9 @@ export function AuthContainer() {
             </div>
 
             <Button className="mt-4 text-base h-12" onClick={() => {
-              // Extract first name from full name or default
+              // Extrair o primeiro nome do nome completo ou usar um valor padrão
               const firstName = name ? name.split(" ")[0] : "Usuário";
-              login({ name: firstName, document, phone });
+              login({ name: firstName, document, phone, password });
               router.push("/");
             }}>
               Criar Conta ⊕
