@@ -41,9 +41,8 @@ export function PixTransferFlow() {
     setError("");
     try {
       await api.post('/pix/transferencia', {
-        chaveDestino: recipient.chavePix,
+        chavePixDestino: recipient.chavePix,
         valor: amount,
-        senha: password
       });
       setStep(4);
     } catch (err: any) {
