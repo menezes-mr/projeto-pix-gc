@@ -7,13 +7,26 @@ import { StepValue } from "./steps/step-value";
 import { StepConfirm } from "./steps/step-confirm";
 import { Button } from "@/components/ui/button";
 
-export function PixTransferFlow() {
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [pixKey, setPixKey] = useState("");
-  const [amount, setAmount] = useState(0);
+import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/auth-context";
 
-  const handleNextKey = (key: string) => {
-    setPixKey(key);
+interface Recipient {
+  chavePix: string;
+  tipoChave: string;
+  nomeCompleto: string;
+  documentoMascarado: string;
+}
+
+export function PixTransferFlow() {
+  const { user } = useAuth();
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [recipient, setRecipient] = useState<Recipient | null>(null);
+  const [amount, setAmount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleNextKey = (rec: Recipient) => {
+    setRecipient(rec);
     setStep(2);
   };
 
@@ -22,13 +35,27 @@ export function PixTransferFlow() {
     setStep(3);
   };
 
-  const handleConfirm = () => {
-    setStep(4);
+  const handleConfirm = async (password: string) => {
+    if (!recipient) return;
+    setLoading(true);
+    setError("");
+    try {
+      await api.post('/pix/transferencia', {
+        chaveDestino: recipient.chavePix,
+        valor: amount,
+        senha: password
+      });
+      setStep(4);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Erro ao transferir");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetFlow = () => {
     setStep(1);
-    setPixKey("");
+    setRecipient(null);
     setAmount(0);
   };
 
@@ -55,7 +82,7 @@ export function PixTransferFlow() {
         <div className="flex flex-col items-center gap-2">
           <h2 className="text-2xl font-bold text-gray-900">Transferência Concluída!</h2>
           <p className="text-gray-500 text-center">
-            Sua transferência de <strong>{amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong> para a chave <strong>{pixKey}</strong> foi enviada com sucesso.
+            Sua transferência de <strong>{amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong> para <strong>{recipient?.nomeCompleto}</strong> foi enviada com sucesso.
           </p>
         </div>
         <Button onClick={resetFlow} className="mt-4 bg-gray-900 hover:bg-black text-white w-full max-w-xs">
@@ -94,8 +121,8 @@ export function PixTransferFlow() {
       {/* Steps Content */}
       <div className="flex-1">
         {step === 1 && <StepKey onNext={handleNextKey} />}
-        {step === 2 && <StepValue recipientKey={pixKey} onNext={handleNextValue} />}
-        {step === 3 && <StepConfirm recipientKey={pixKey} amount={amount} onNext={handleConfirm} />}
+        {step === 2 && recipient && <StepValue recipient={recipient} onNext={handleNextValue} onBack={() => setStep(1)} />}
+        {step === 3 && recipient && <StepConfirm recipient={recipient} amount={amount} onNext={handleConfirm} loading={loading} error={error} onBack={() => setStep(2)} />}
       </div>
     </div>
   );

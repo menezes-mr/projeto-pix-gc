@@ -6,16 +6,25 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 
-interface StepConfirmProps {
-  recipientKey: string;
-  amount: number;
-  onNext: () => void;
+interface Recipient {
+  chavePix: string;
+  tipoChave: string;
+  nomeCompleto: string;
+  documentoMascarado: string;
 }
 
-export function StepConfirm({ recipientKey, amount, onNext }: StepConfirmProps) {
-  const { user } = useAuth();
+interface StepConfirmProps {
+  recipient: Recipient;
+  amount: number;
+  onNext: (password: string) => void;
+  loading: boolean;
+  error: string;
+  onBack: () => void;
+}
+
+export function StepConfirm({ recipient, amount, onNext, loading, error, onBack }: StepConfirmProps) {
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [localError, setLocalError] = useState("");
 
   const formattedAmount = amount.toLocaleString("pt-BR", {
     style: "currency",
@@ -24,15 +33,8 @@ export function StepConfirm({ recipientKey, amount, onNext }: StepConfirmProps) 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Se o usuário tem senha cadastrada, verifica. Senão, aceita qualquer coisa pra fim de protótipo.
-    if (user?.password && password !== user.password) {
-      setError("Senha incorreta. Tente novamente.");
-      return;
-    }
-    
-    setError("");
-    onNext();
+    setLocalError("");
+    onNext(password);
   };
 
   return (
@@ -51,11 +53,11 @@ export function StepConfirm({ recipientKey, amount, onNext }: StepConfirmProps) 
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-500">Para</span>
-          <span className="text-sm font-semibold text-gray-900">João Silva</span>
+          <span className="text-sm font-semibold text-gray-900">{recipient.nomeCompleto}</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-500">Chave PIX</span>
-          <span className="text-sm font-semibold text-gray-900">{recipientKey}</span>
+          <span className="text-sm font-semibold text-gray-900">{recipient.chavePix} ({recipient.tipoChave})</span>
         </div>
       </div>
 
@@ -69,17 +71,28 @@ export function StepConfirm({ recipientKey, amount, onNext }: StepConfirmProps) 
           className="text-lg"
           autoFocus
         />
+        {localError && <span className="text-red-500 text-sm font-medium mt-1">{localError}</span>}
         {error && <span className="text-red-500 text-sm font-medium mt-1">{error}</span>}
       </div>
 
-      <Button 
-        type="submit" 
-        disabled={password.length === 0}
-        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-lg gap-2 mt-4"
-      >
-        <CheckCircle2 className="w-5 h-5" />
-        Confirmar Transferência
-      </Button>
+      <div className="flex flex-col gap-3 mt-4">
+        <Button 
+          type="submit" 
+          disabled={password.length === 0 || loading}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-lg gap-2"
+        >
+          <CheckCircle2 className="w-5 h-5" />
+          {loading ? "Confirmando..." : "Confirmar Transferência"}
+        </Button>
+        <Button
+          type="button"
+          onClick={onBack}
+          disabled={loading}
+          className="w-full h-12 text-lg bg-transparent border border-gray-300 text-gray-700 hover:bg-gray-100"
+        >
+          Voltar
+        </Button>
+      </div>
     </form>
   );
 }

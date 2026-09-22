@@ -7,6 +7,13 @@ import { PrismaService } from '../prisma/prisma.service';
 export class PixKeyService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async listarChavesDaConta(contaId: string) {
+    return this.prisma.chavePix.findMany({
+      where: { contaId, status: 'ATIVA' },
+      orderBy: { dataCriacao: 'desc' },
+    });
+  }
+
   private async validarContaUsuario(contaId: string, usuarioId: string) {
     const conta = await this.prisma.conta.findUnique({
       where: { contaId },
