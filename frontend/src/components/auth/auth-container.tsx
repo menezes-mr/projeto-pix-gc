@@ -102,10 +102,13 @@ export function AuthContainer() {
               />
             </div>
 
-            <Button className="mt-2 text-base h-12" onClick={() => {
-              // Basic mock login
-              login({ name: loginIdentifier.includes('@') ? loginIdentifier.split('@')[0] : "Usuário" });
-              router.push("/");
+            <Button className="mt-2 text-base h-12" onClick={async () => {
+              try {
+                await login({ document: loginIdentifier, password });
+                router.push("/");
+              } catch (e) {
+                alert("Erro ao entrar. Verifique credenciais.");
+              }
             }}>
               Entrar →
             </Button>
@@ -199,11 +202,14 @@ export function AuthContainer() {
               </div>
             </div>
 
-            <Button className="mt-4 text-base h-12" onClick={() => {
-              // Extrair o primeiro nome do nome completo ou usar um valor padrão
-              const firstName = name ? name.split(" ")[0] : "Usuário";
-              login({ name: firstName, document, phone, password });
-              router.push("/");
+            <Button className="mt-4 text-base h-12" onClick={async () => {
+              // Extract first name from full name or default
+              try {
+                await login({ name, document, phone, password });
+                router.push("/");
+              } catch (e) {
+                alert("Erro ao criar conta.");
+              }
             }}>
               Criar Conta ⊕
             </Button>
