@@ -9,6 +9,8 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { ContaService } from './conta.service';
 import { CreateContaDto } from './dto/create-conta.dto';
@@ -31,7 +33,6 @@ export class ContaController {
   @Get(':id/saldo')
   @HttpCode(HttpStatus.OK)
   async consultarSaldo(@Param('id') contaId: string, @Req() req: any) {
-    
     const idUsuarioLogado =
       req.user?.usuarioId ||
       req.user?.sub ||
@@ -40,7 +41,7 @@ export class ContaController {
 
     return await this.contaService.consultarSaldo(contaId, idUsuarioLogado);
   }
-   @Get(':id/transacoes')
+  @Get(':id/transacoes')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async listarTransacoes(
@@ -63,15 +64,16 @@ export class ContaController {
     return await this.contaService.criarConta(createContaDto);
   }
 
- 
-
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
   async atualizarConfiguracoes(
     @Param('id') contaId: string,
     @Body() updateContaDto: UpdateContaDto,
   ) {
-    return await this.contaService.atualizarConfiguracoes(contaId, updateContaDto);
+    return await this.contaService.atualizarConfiguracoes(
+      contaId,
+      updateContaDto,
+    );
   }
 
   @Patch(':id/bloquear')
@@ -81,7 +83,10 @@ export class ContaController {
     @Param('id') contaId: string,
     @Body() bloquearContaDto: BloquearContaDto,
   ) {
-    return await this.contaService.bloquearContaPorFraude(contaId, bloquearContaDto);
+    return await this.contaService.bloquearContaPorFraude(
+      contaId,
+      bloquearContaDto,
+    );
   }
 
   @Delete(':id')
