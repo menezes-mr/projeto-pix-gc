@@ -4,7 +4,6 @@ export default function Home() {
   return (
     <main className="flex-1 bg-gray-50 flex flex-col items-center justify-center min-h-screen p-4 md:p-8">
       <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-center gap-12">
-        {/* Left column / Branding */}
         <div className="flex-1 flex flex-col items-start gap-4 lg:pr-12 text-center lg:text-left">
           <div className="flex items-center justify-center lg:justify-start gap-3 w-full">
             <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center text-white font-bold text-xl">
@@ -19,7 +18,6 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Right column / Auth Form */}
         <div className="flex-1 w-full max-w-md">
           <AuthContainer />
         </div>

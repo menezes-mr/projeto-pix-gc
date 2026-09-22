@@ -6,7 +6,6 @@ import { join } from 'node:path';
 import { PixAgendadoService } from '../src/pix-agendado/pix-agendado.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 
-// Nunca utiliza DATABASE_URL do projeto; cria e remove somente seu próprio schema.
 const databaseUrl = process.env.PIX_TEST_DATABASE_URL;
 if (!databaseUrl) {
   throw new Error('Defina PIX_TEST_DATABASE_URL para um PostgreSQL de testes.');
@@ -55,7 +54,6 @@ describe('PIX agendado no PostgreSQL', () => {
 
   afterAll(async () => {
     await outroPrisma.$disconnect();
-    // O identificador é gerado acima com prefixo fixo e UUID hexadecimal.
     await prisma.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
     await prisma.$disconnect();
   });

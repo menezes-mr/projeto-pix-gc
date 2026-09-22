@@ -14,7 +14,6 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const { identificador, senha } = loginDto;
 
-    // Busca usuário pelo CPF/CNPJ ou Email
     const usuario = await this.prisma.usuario.findFirst({
       where: {
         OR: [
@@ -34,18 +33,15 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    // Compara a senha
     const isPasswordValid = await bcrypt.compare(senha, usuario.senha);
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    // Pega a conta principal (primeira vinculada)
     const contaId = usuario.contas[0]?.contaId || null;
     const saldo = usuario.contas[0]?.conta?.saldo || 0;
 
-    // Gera o token JWT
     const payload = { sub: usuario.usuarioId, email: usuario.email, contaId };
     
     return {

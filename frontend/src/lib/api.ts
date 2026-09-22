@@ -5,7 +5,6 @@ export const api = axios.create({
   timeout: 10000,
 });
 
-// Interceptor para injetar o token em todas as requisições, caso ele exista no localStorage.
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('pix_token');

@@ -66,7 +66,6 @@ export function AuthContainer() {
 
   return (
     <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] overflow-hidden">
-      {/* Segmented Control / Tabs */}
       <div className="p-1 m-4 bg-gray-100 rounded-lg flex items-center">
         <button
           onClick={() => changeMode("login")}

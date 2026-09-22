@@ -8,7 +8,6 @@ RUN npm install
 
 COPY . .
 
-# Construir a aplicação Next.js
 RUN npm run build
 
 EXPOSE 3000

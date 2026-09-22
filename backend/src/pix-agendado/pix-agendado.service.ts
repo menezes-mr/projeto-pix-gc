@@ -30,7 +30,6 @@ export class PixAgendadoService {
 
   async cancelar(transacaoId: string, usuarioId: string) {
     return this.prisma.$transaction(async (tx) => {
-      // Compartilha o bloqueio com o executor: o estado é validado após adquiri-lo.
       const registros = await tx.$queryRaw<Array<{ transacaoId: string }>>`
         SELECT "transacaoId" FROM "TransacaoPix"
         WHERE "transacaoId" = ${transacaoId}
@@ -40,7 +39,6 @@ export class PixAgendadoService {
         throw new NotFoundException('Transação PIX não encontrada');
       }
 
-      // Mantém a titularidade e o status do usuário estáveis até o commit.
       await tx.$queryRaw`
         SELECT u."usuarioId" FROM "Usuario" u
         JOIN "UsuarioConta" v ON v."usuarioId" = u."usuarioId"
@@ -109,7 +107,6 @@ export class PixAgendadoService {
       try {
         await this.executar(transacaoId, agora);
       } catch (error) {
-        // Erros técnicos mantêm PENDENTE para nova tentativa no próximo ciclo.
         this.logger.error(
           `Erro ao executar PIX agendado ${transacaoId}`,
           error,
@@ -120,8 +117,6 @@ export class PixAgendadoService {
 
   async executar(transacaoId: string, agora = new Date()) {
     const resultado = await this.prisma.$transaction(async (tx) => {
-      // O bloqueio dura até o commit; outras instâncias ignoram este PIX.
-      // DateTime do Prisma usa timestamp sem fuso, com os valores em UTC.
       const [pendente] = await tx.$queryRaw<TransacaoPix[]>`
         SELECT * FROM "TransacaoPix"
         WHERE "transacaoId" = ${transacaoId}
@@ -132,7 +127,6 @@ export class PixAgendadoService {
 
       if (!pendente) return null;
 
-      // Permite desfazer o débito e gravar FALHA sem soltar o bloqueio do PIX.
       await tx.$executeRaw`SAVEPOINT movimentacao_pix`;
       try {
         return await this.efetivar(tx, pendente);
@@ -150,7 +144,6 @@ export class PixAgendadoService {
     });
 
     if (resultado?.status === StatusTransacao.EFETIVADA) {
-      // Notificações só ocorrem depois do commit e não alteram o resultado.
       try {
         this.eventEmitter.emit('pix.efetivado', resultado);
       } catch (error) {
@@ -177,14 +170,12 @@ export class PixAgendadoService {
       );
     }
 
-    // Ordem estável evita deadlock entre transferências em sentidos opostos.
     await tx.$queryRaw`
       SELECT "contaId" FROM "Conta"
       WHERE "contaId" IN (${contaOrigemId}, ${contaDestinoId})
       ORDER BY "contaId"
       FOR UPDATE
     `;
-    // Impede alteração de status ou remoção dos vínculos durante a validação.
     await tx.$queryRaw`
       SELECT u."usuarioId" FROM "Usuario" u
       JOIN "UsuarioConta" v ON v."usuarioId" = u."usuarioId"

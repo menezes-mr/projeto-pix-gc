@@ -9,19 +9,15 @@ export default function ProfilePage() {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
       
-      {/* Cabeçalho do Perfil*/}
       <ProfileHeader />
 
-      {/* Grid de 2 Colunas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* Coluna da Esquerda */}
         <div className="flex flex-col gap-6">
           <PersonalDataForm />
           <LimitsCard />
         </div>
 
-        {/* Coluna da Direita */}
         <div className="flex flex-col gap-6">
           <SecuritySettings />
           <DangerZone />

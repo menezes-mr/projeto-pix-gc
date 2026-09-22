@@ -2,7 +2,6 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Instalar dependências necessárias para o Prisma (OpenSSL)
 RUN apk add --no-cache openssl
 
 COPY package*.json ./
@@ -17,5 +16,4 @@ RUN npm run build && test -f dist/main.js
 
 EXPOSE 3333
 
-# Em produção, usa o node dist/main
 CMD ["sh", "-c", "npx prisma db push && npm run start:prod"]

@@ -16,7 +16,6 @@ export function BalanceCard() {
   return (
     <div className="w-full bg-gradient-to-r from-[#3b3c5a] via-[#484ea3] to-[#5b63e4] rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
       
-      {/* Saldo Section */}
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-medium text-white/70">Saldo disponível</span>
         <button
@@ -33,7 +32,6 @@ export function BalanceCard() {
         </h2>
       </div>
 
-      {/* Limite PIX Section */}
       <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full text-xs font-medium">
         <Zap className="w-3 h-3 text-green-300 fill-green-300" />
         <span className="text-white/80">

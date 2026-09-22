@@ -8,7 +8,7 @@ export class PixRecebimentoController {
   constructor(private readonly pixRecebimentoService: PixRecebimentoService) {}
 
   @Post()
-  @HttpCode(HttpStatus.OK) // 200, tanto no fluxo novo quanto no idempotente
+  @HttpCode(HttpStatus.OK)
   async receber(@Body() dto: RecebimentoPixDto) {
     return this.pixRecebimentoService.receberPix(
       dto.chavePixDestino,
