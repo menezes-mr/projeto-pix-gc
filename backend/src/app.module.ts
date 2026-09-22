@@ -9,6 +9,7 @@ import { PixRecebimentoModule } from './pix-recebimento/pix-recebimento.module';
 import { PixTransferenciaModule } from './pix-transferencia/pix-transferencia.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { NotificacaoModule } from './notificacao/notificacao.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { NotificacaoModule } from './notificacao/notificacao.module';
     PixRecebimentoModule,
     PixTransferenciaModule,
     NotificacaoModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [],

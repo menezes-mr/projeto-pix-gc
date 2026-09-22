@@ -10,5 +10,6 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [PrismaModule, JwtModule.register({})],
   controllers: [UsuariosController, RelatorioTransacoesController],
   providers: [UsuariosService, RelatorioTransacoesService],
+  exports: [UsuariosService],
 })
 export class UsuariosModule {}
