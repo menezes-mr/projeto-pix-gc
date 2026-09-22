@@ -7,8 +7,6 @@ import {
   Body,
   Param,
   Query,
-  Req,
-  UseGuards,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -42,14 +40,7 @@ export class ContaController {
 
     return await this.contaService.consultarSaldo(contaId, idUsuarioLogado);
   }
-
-  @Post()
-  @HttpCode(HttpStatus.CREATED)
-  async criarConta(@Body() createContaDto: CreateContaDto) {
-    return await this.contaService.criarConta(createContaDto);
-  }
-
-  @Get(':id/transacoes')
+   @Get(':id/transacoes')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async listarTransacoes(
@@ -64,6 +55,13 @@ export class ContaController {
       query.limit,
     );
   }
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  async criarConta(@Body() createContaDto: CreateContaDto) {
+    return await this.contaService.criarConta(createContaDto);
+  }
+
+ 
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
