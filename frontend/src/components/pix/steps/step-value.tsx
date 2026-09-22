@@ -5,12 +5,20 @@ import { Eye, CheckCircle2, AlertCircle, Calendar, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 
-interface StepValueProps {
-  recipientKey: string;
-  onNext: (amount: number) => void;
+interface Recipient {
+  chavePix: string;
+  tipoChave: string;
+  nomeCompleto: string;
+  documentoMascarado: string;
 }
 
-export function StepValue({ recipientKey, onNext }: StepValueProps) {
+interface StepValueProps {
+  recipient: Recipient;
+  onNext: (amount: number) => void;
+  onBack: () => void;
+}
+
+export function StepValue({ recipient, onNext, onBack }: StepValueProps) {
   const { user } = useAuth();
   const balance = user?.balance || 5000;
   
@@ -65,11 +73,11 @@ export function StepValue({ recipientKey, onNext }: StepValueProps) {
           </div>
           <div className="flex flex-col">
             <span className="text-xs font-bold text-emerald-600 tracking-wider">DESTINATÁRIO VALIDADO</span>
-            <span className="text-sm font-bold text-gray-900 mt-1">João Silva</span>
-            <span className="text-xs text-gray-500">CPF: ***.123.456-**</span>
+            <span className="text-sm font-bold text-gray-900 mt-1">{recipient.nomeCompleto}</span>
+            <span className="text-xs text-gray-500">Chave: {recipient.chavePix} ({recipient.tipoChave})</span>
           </div>
         </div>
-        <button className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+        <button onClick={onBack} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
           Trocar
         </button>
       </div>

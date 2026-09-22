@@ -10,7 +10,11 @@ api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('pix_token');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      if (config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        config.headers = { Authorization: `Bearer ${token}` } as any;
+      }
     }
   }
   return config;

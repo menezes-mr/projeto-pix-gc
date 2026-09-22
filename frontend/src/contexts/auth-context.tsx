@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { api } = await import('@/lib/api');
       const response = await api.post('/auth/login', loginData);
       
-      const { access_token, usuario } = response.data;
+      const { access_token, usuario } = response.data as any;
       
       const mappedUser = {
         name: usuario.nome,
