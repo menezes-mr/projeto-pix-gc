@@ -13,7 +13,7 @@ COPY . .
 
 RUN npx prisma generate
 
-RUN npm run build
+RUN npm run build && test -f dist/main.js
 
 EXPOSE 3333
 
