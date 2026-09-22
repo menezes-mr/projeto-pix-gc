@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma } from '@prisma/client';
+import { StatusTransacao } from '../common/enums/status.enum';
+import { TipoOperacao } from '../common/enums/tipo-operacao.enum';
 import { PrismaService } from '../prisma/prisma.service';
+import { HistoricoPixService } from '../shared/historico-pix/historico-pix.service';
 import { TransferenciaPixDto } from './dto/transferencia-pix.dto';
 
 export interface ContextoTransferenciaPix {
@@ -19,6 +22,7 @@ export class PixTransferenciaService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly historicoPixService: HistoricoPixService,
   ) {}
 
   async transferir(
@@ -119,18 +123,20 @@ export class PixTransferenciaService {
         });
       }
 
-      const transacao = await tx.transacaoPix.create({
-        data: {
+      const transacao = await this.historicoPixService.registrarTransacao(
+        {
           chavePixUtilizada: chavePixDestino,
           valor,
-          tipoOperacao: 'TRANSFERENCIA_SAIDA',
-          status: dataAgendamento ? 'PENDENTE' : 'EFETIVADA',
-          dataAgendamento,
-          dataEfetivacao: dataAgendamento ? null : new Date(),
+          tipoOperacao: TipoOperacao.TRANSFERENCIA_SAIDA,
+          status: dataAgendamento
+            ? StatusTransacao.PENDENTE
+            : StatusTransacao.EFETIVADA,
+          ...(dataAgendamento ? { dataAgendamento } : {}),
           contaOrigemId,
           contaDestinoId: chaveDestino.contaId,
         },
-      });
+        tx,
+      );
 
       await tx.logAtividade.create({
         data: {
