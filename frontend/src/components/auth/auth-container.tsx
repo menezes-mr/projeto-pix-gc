@@ -7,7 +7,7 @@ import { User, Lock, Mail, Phone, Eye, EyeOff, AlertTriangle } from "lucide-reac
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { PasswordStrength } from "./password-strength";
+import { PasswordStrength, isPasswordStrong } from "./password-strength";
 import { cn, formatCPFOrCNPJ, formatPhone } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 
@@ -36,9 +36,10 @@ export function AuthContainer() {
   const [notificationEmail, setNotificationEmail] = useState(false);
   const [notificationPush, setNotificationPush] = useState(false);
 
-
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isPasswordValid = isPasswordStrong(password);
 
   const changeMode = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -53,6 +54,13 @@ export function AuthContainer() {
     setIsSubmitting(true);
     try {
       if (mode === "register") {
+        if (!isPasswordValid) {
+          setError(
+            "A senha deve cumprir todos os requisitos: no mínimo 8 caracteres, número, letra maiúscula e caractere especial."
+          );
+          setIsSubmitting(false);
+          return;
+        }
         await register({
           name,
           email,
@@ -252,7 +260,11 @@ export function AuthContainer() {
               </div>
             </div>
 
-            <Button type="submit" className="mt-4 text-base h-12" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              className="mt-4 text-base h-12"
+              disabled={isSubmitting || !isPasswordValid}
+            >
               {isSubmitting ? "Criando conta..." : "Criar Conta ⊕"}
             </Button>
             
