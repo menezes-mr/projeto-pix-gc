@@ -96,6 +96,8 @@ export default function AdminPage() {
   const [contaParaBloquear, setContaParaBloquear] = useState<ContaItem | null>(null);
   const [motivoBloqueio, setMotivoBloqueio] = useState("Suspeita de golpe / Movimentação atípica");
   const [bloqueando, setBloqueando] = useState(false);
+  const [contaParaDesbloquear, setContaParaDesbloquear] = useState<ContaItem | null>(null);
+  const [desbloqueando, setDesbloqueando] = useState(false);
   const [feedback, setFeedback] = useState<{ tipo: "success" | "error"; texto: string } | null>(null);
 
   const handleAdminLogin = (e: React.FormEvent) => {
@@ -225,6 +227,42 @@ export default function AdminPage() {
       }
     } finally {
       setBloqueando(false);
+    }
+  };
+
+  const handleDesbloquearConta = async () => {
+    if (!contaParaDesbloquear) return;
+    setDesbloqueando(true);
+    setFeedback(null);
+    try {
+      await api.patch(
+        `/contas/${contaParaDesbloquear.contaId}/desbloquear`,
+        {
+          usuarioId: contaParaDesbloquear.titular?.usuarioId || "admin-sistema",
+          motivo: "Desbloqueio regular efetuado pela administração",
+        },
+        {
+          headers: { "x-user-role": "ADMIN" },
+        }
+      );
+      setFeedback({
+        tipo: "success",
+        texto: `Conta ${contaParaDesbloquear.numeroConta} e acessos do titular desbloqueados com sucesso.`,
+      });
+      setContaParaDesbloquear(null);
+      await carregarContas();
+      await carregarRelatorio();
+    } catch (err: unknown) {
+      if (axios.isAxiosError<{ message?: string }>(err)) {
+        setFeedback({
+          tipo: "error",
+          texto: err.response?.data?.message || "Erro ao desbloquear conta.",
+        });
+      } else {
+        setFeedback({ tipo: "error", texto: "Erro ao desbloquear conta." });
+      }
+    } finally {
+      setDesbloqueando(false);
     }
   };
 
@@ -683,10 +721,14 @@ export default function AdminPage() {
                                   Bloquear por Fraude
                                 </button>
                               ) : isBloqueada ? (
-                                <span className="text-[11px] font-semibold text-red-400 flex items-center justify-end gap-1">
-                                  <ShieldAlert className="w-3.5 h-3.5" />
-                                  Bloqueada
-                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setContaParaDesbloquear(c)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-800/60 text-emerald-300 text-xs font-semibold transition-colors cursor-pointer"
+                                >
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  Desbloquear Conta
+                                </button>
                               ) : (
                                 <span className="text-slate-500 text-xs">—</span>
                               )}
@@ -763,6 +805,60 @@ export default function AdminPage() {
                 >
                   {bloqueando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
                   Confirmar Bloqueio
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {contaParaDesbloquear && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4">
+              <div className="flex items-center gap-3 text-emerald-400">
+                <div className="w-10 h-10 rounded-xl bg-emerald-950/50 border border-emerald-800/50 flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-base">Desbloquear Conta Bancária</h4>
+                  <p className="text-xs text-slate-400">Reativação e liberação de acesso ao usuário</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-3.5 text-xs text-slate-300 flex flex-col gap-1.5">
+                <div>
+                  <span className="text-slate-500">Conta:</span>{" "}
+                  <strong className="text-white font-mono">{contaParaDesbloquear.numeroConta}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Titular:</span>{" "}
+                  <strong className="text-white">{contaParaDesbloquear.titular?.nomeCompleto}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">CPF:</span>{" "}
+                  <span className="font-mono text-slate-400">{contaParaDesbloquear.titular?.cpfCnpj}</span>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/40 p-3 rounded-lg border border-slate-800">
+                Ao confirmar o desbloqueio, o status da conta e do usuário titular retornará para <strong>ATIVA</strong>, restaurando o acesso ao Internet Banking e transferências PIX.
+              </p>
+
+              <div className="flex items-center justify-end gap-3 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setContaParaDesbloquear(null)}
+                  disabled={desbloqueando}
+                  className="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDesbloquearConta}
+                  disabled={desbloqueando}
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {desbloqueando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                  Confirmar Desbloqueio
                 </button>
               </div>
             </div>

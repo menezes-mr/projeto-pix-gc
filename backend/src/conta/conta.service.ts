@@ -13,8 +13,10 @@ import {
   StatusUsuario,
   StatusConta,
   PapelUsuarioConta,
+  StatusTransacao,
 } from '../common/enums/status.enum';
 import { BloquearContaDto } from './dto/bloquear-conta.dto';
+import { DesbloquearContaDto } from './dto/desbloquear-conta.dto';
 
 @Injectable()
 export class ContaService {
@@ -433,6 +435,26 @@ export class ContaService {
         },
       });
 
+      for (const usuarioConta of conta.usuarios) {
+        await tx.usuario.update({
+          where: { usuarioId: usuarioConta.usuarioId },
+          data: {
+            status: StatusUsuario.BLOQUEADO,
+            dataAtualizacao: new Date(),
+          },
+        });
+      }
+
+      await tx.transacaoPix.updateMany({
+        where: {
+          contaOrigemId: contaId,
+          status: StatusTransacao.PENDENTE,
+        },
+        data: {
+          status: StatusTransacao.CANCELADA,
+        },
+      });
+
       const detalheMotivo = dto.motivo ? ` | Motivo: ${dto.motivo}` : '';
       const usuarioValido = await tx.usuario.findUnique({
         where: { usuarioId: dto.usuarioId },
@@ -452,6 +474,64 @@ export class ContaService {
       return {
         mensagem: 'Conta bloqueada por suspeita de fraude com sucesso.',
         conta: contaBloqueada,
+      };
+    });
+  }
+
+  async desbloquearConta(contaId: string, dto?: DesbloquearContaDto) {
+    const conta = await this.prisma.conta.findUnique({
+      where: { contaId },
+      include: {
+        usuarios: true,
+      },
+    });
+
+    if (!conta) {
+      throw new NotFoundException('Conta bancária não encontrada.');
+    }
+
+    if (conta.status !== String(StatusConta.BLOQUEADA)) {
+      throw new BadRequestException('Esta conta não se encontra bloqueada.');
+    }
+
+    return await this.prisma.$transaction(async (tx) => {
+      const contaDesbloqueada = await tx.conta.update({
+        where: { contaId },
+        data: {
+          status: StatusConta.ATIVA,
+          dataAtualizacao: new Date(),
+        },
+      });
+
+      for (const usuarioConta of conta.usuarios) {
+        await tx.usuario.update({
+          where: { usuarioId: usuarioConta.usuarioId },
+          data: {
+            status: StatusUsuario.ATIVO,
+            dataAtualizacao: new Date(),
+          },
+        });
+      }
+
+      const detalheMotivo = dto?.motivo ? ` | Motivo: ${dto.motivo}` : '';
+      const usuarioValido = dto?.usuarioId
+        ? await tx.usuario.findUnique({ where: { usuarioId: dto.usuarioId } })
+        : null;
+      const idUsuarioParaLog =
+        usuarioValido?.usuarioId ?? conta.usuarios[0]?.usuarioId;
+
+      if (idUsuarioParaLog) {
+        await tx.logAtividade.create({
+          data: {
+            usuarioId: idUsuarioParaLog,
+            acao: `DESBLOQUEIO_CONTA${detalheMotivo}`,
+          },
+        });
+      }
+
+      return {
+        mensagem: 'Conta e usuários associados desbloqueados com sucesso.',
+        conta: contaDesbloqueada,
       };
     });
   }

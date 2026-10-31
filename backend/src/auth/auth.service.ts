@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
@@ -17,7 +21,6 @@ export class AuthService {
     const usuario = await this.prisma.usuario.findFirst({
       where: {
         OR: [{ email: identificador }, { cpfCnpj: identificador }],
-        status: 'ATIVO',
       },
       include: {
         contas: {
@@ -36,8 +39,24 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
+    if (usuario.status === 'BLOQUEADO') {
+      throw new ForbiddenException(
+        'Acesso bloqueado: Usuário ou conta bloqueada por suspeita de fraude. Entre em contato com a administração.',
+      );
+    }
+
+    if (usuario.status !== 'ATIVO') {
+      throw new UnauthorizedException('Usuário inativo.');
+    }
+
     let conta = usuario.contas[0]?.conta;
     let contaId = usuario.contas[0]?.contaId || null;
+
+    if (conta && conta.status === 'BLOQUEADA') {
+      throw new ForbiddenException(
+        'Acesso bloqueado: Conta bancária bloqueada por suspeita de fraude. Entre em contato com a administração.',
+      );
+    }
 
     if (!contaId || !conta) {
       const numeroConta = `${Math.floor(100000 + Math.random() * 900000)}-${Math.floor(Math.random() * 10)}`;
@@ -77,6 +96,7 @@ export class AuthService {
         saldo: Number(conta.saldo),
         agencia: conta.agencia,
         numeroConta: conta.numeroConta,
+        statusConta: conta.status,
         limiteDiarioPix: Number(conta.limiteDiarioPix),
         receberSms: usuario.receberSms,
         receberEmail: usuario.receberEmail,

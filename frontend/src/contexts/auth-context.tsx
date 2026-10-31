@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import axios from "axios";
 
 export interface User {
   id: string;
@@ -14,6 +15,7 @@ export interface User {
   agency?: string;
   accountNumber?: string;
   dailyLimit?: number;
+  accountStatus?: string;
   receberSms?: boolean;
   receberEmail?: boolean;
   receberPush?: boolean;
@@ -45,6 +47,7 @@ interface LoginResponse {
     contaId: string | null;
     agencia?: string;
     numeroConta?: string;
+    statusConta?: string;
     limiteDiarioPix?: number;
     receberSms?: boolean;
     receberEmail?: boolean;
@@ -97,11 +100,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 agency: res.data.agencia,
                 accountNumber: res.data.numeroConta,
                 dailyLimit: Number(res.data.limiteDiarioPix),
+                accountStatus: res.data.status,
               };
               setUser(updated);
               localStorage.setItem("pix_user", JSON.stringify(updated));
             })
-            .catch(() => {});
+            .catch((err: unknown) => {
+              if (
+                axios.isAxiosError(err) &&
+                (err.response?.status === 403 || err.response?.status === 401)
+              ) {
+                const updated: User = {
+                  ...parsed,
+                  accountStatus: "BLOQUEADA",
+                };
+                setUser(updated);
+                localStorage.setItem("pix_user", JSON.stringify(updated));
+              }
+            });
         }
       } catch {
         localStorage.removeItem("pix_user");
@@ -129,11 +145,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           agency: res.data.agencia,
           accountNumber: res.data.numeroConta,
           dailyLimit: Number(res.data.limiteDiarioPix),
+          accountStatus: res.data.status,
         };
         localStorage.setItem("pix_user", JSON.stringify(updated));
         return updated;
       });
-    } catch {}
+    } catch (err: unknown) {
+      if (
+        axios.isAxiosError(err) &&
+        (err.response?.status === 403 || err.response?.status === 401)
+      ) {
+        setUser((prev) => {
+          if (!prev) return null;
+          const updated: User = {
+            ...prev,
+            accountStatus: "BLOQUEADA",
+          };
+          localStorage.setItem("pix_user", JSON.stringify(updated));
+          return updated;
+        });
+      }
+    }
   };
 
   const updateProfile = async (data: {
@@ -203,6 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       contaId: usuario.contaId,
       agency: usuario.agencia || "0001",
       accountNumber: usuario.numeroConta || "",
+      accountStatus: usuario.statusConta || "ATIVA",
       dailyLimit: usuario.limiteDiarioPix || 1000,
       receberSms: usuario.receberSms ?? false,
       receberEmail: usuario.receberEmail ?? false,

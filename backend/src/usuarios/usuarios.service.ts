@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
@@ -218,12 +219,21 @@ export class UsuariosService {
     const usuario = await this.prisma.usuario.findFirst({
       where: {
         usuarioId: id,
-        status: 'ATIVO',
       },
     });
 
     if (!usuario) {
       throw new NotFoundException('Usuário não encontrado');
+    }
+
+    if (usuario.status === 'BLOQUEADO') {
+      throw new ForbiddenException(
+        'Acesso bloqueado: Usuário ou conta bloqueada por suspeita de fraude.',
+      );
+    }
+
+    if (usuario.status !== 'ATIVO') {
+      throw new NotFoundException('Usuário inativo');
     }
 
     return usuario;

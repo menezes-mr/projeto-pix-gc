@@ -25,6 +25,7 @@ import { UpdateContaDto } from './dto/update-conta.dto';
 import { ExtratoQueryDto } from './dto/extrato-query.dto';
 import { JwtAuthGuard, RequestAutenticada } from '../auth/jwt-auth.guard';
 import { BloquearContaDto } from './dto/bloquear-conta.dto';
+import { DesbloquearContaDto } from './dto/desbloquear-conta.dto';
 import { AdminRoleGuard } from '../common/guards/roles.guard';
 
 @ApiTags('Contas')
@@ -121,6 +122,24 @@ export class ContaController {
       contaId,
       bloquearContaDto,
     );
+  }
+
+  @Patch(':id/desbloquear')
+  @UseGuards(AdminRoleGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Desbloquear conta bancária (Requer ADMIN)',
+  })
+  @ApiHeader({
+    name: 'x-user-role',
+    required: true,
+    description: 'Papel do usuário (deve ser ADMIN)',
+  })
+  async desbloquearConta(
+    @Param('id') contaId: string,
+    @Body() dto?: DesbloquearContaDto,
+  ) {
+    return await this.contaService.desbloquearConta(contaId, dto);
   }
 
   @Delete(':id')
