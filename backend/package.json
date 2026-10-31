@@ -19,6 +19,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:pix-agendado": "jest --config ./test/jest-pix-agendado.json --runInBand",
+    "typecheck": "tsc --noEmit",
     "prisma:studio": "prisma studio --port 5555"
   },
   "dependencies": {
