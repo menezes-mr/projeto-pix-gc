@@ -19,6 +19,7 @@ export function PixKeysManager() {
   const [keys, setKeys] = useState<PixKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingKey, setAddingKey] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: "idle" | "success" | "error"; message: string }>({
     type: "idle",
     message: "",
@@ -36,10 +37,10 @@ export function PixKeysManager() {
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
+    let active = true;
     api.get('/pix/chaves/minhas')
       .then((response) => {
-        if (isMounted) {
+        if (active) {
           setKeys(response.data as PixKey[]);
         }
       })
@@ -47,17 +48,40 @@ export function PixKeysManager() {
         console.error("Erro ao buscar chaves", error);
       })
       .finally(() => {
-        if (isMounted) {
+        if (active) {
           setLoading(false);
         }
       });
-
     return () => {
-      isMounted = false;
+      active = false;
     };
   }, []);
 
+  const isLimitReached = keys.length >= 5;
+
+  const handleDeleteKey = async (chaveId: string) => {
+    setDeletingId(chaveId);
+    setFeedback({ type: "idle", message: "" });
+    try {
+      await api.delete(`/pix/chaves/${chaveId}`);
+      setFeedback({ type: "success", message: "Chave PIX removida com sucesso!" });
+      await loadKeys();
+    } catch (error: unknown) {
+      if (axios.isAxiosError<{ message?: string }>(error)) {
+        setFeedback({
+          type: "error",
+          message: error.response?.data?.message || "Erro ao remover chave PIX.",
+        });
+      } else {
+        setFeedback({ type: "error", message: "Erro ao remover chave PIX." });
+      }
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleAddRandomKey = async () => {
+    if (isLimitReached) return;
     setAddingKey(true);
     setFeedback({ type: "idle", message: "" });
     try {
@@ -79,7 +103,7 @@ export function PixKeysManager() {
   };
 
   const handleAddCpfKey = async () => {
-    if (!user?.document) return;
+    if (!user?.document || isLimitReached) return;
     setAddingKey(true);
     setFeedback({ type: "idle", message: "" });
     try {
@@ -104,7 +128,7 @@ export function PixKeysManager() {
   };
 
   const handleAddEmailKey = async () => {
-    if (!user?.email) return;
+    if (!user?.email || isLimitReached) return;
     setAddingKey(true);
     setFeedback({ type: "idle", message: "" });
     try {
@@ -160,6 +184,13 @@ export function PixKeysManager() {
         </div>
       )}
 
+      {isLimitReached && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-lg flex items-center gap-2 text-xs">
+          <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+          <span>Limite de 5 chaves atingido. Remova uma chave existente para cadastrar uma nova.</span>
+        </div>
+      )}
+
       <div className="flex flex-col gap-4 min-h-[150px]">
         {loading ? (
           <div className="flex items-center justify-center flex-1 text-indigo-600">
@@ -187,10 +218,16 @@ export function PixKeysManager() {
               </div>
               <button 
                 type="button" 
-                onClick={(e) => e.preventDefault()} 
-                className="text-gray-400 p-2 cursor-default"
+                onClick={() => handleDeleteKey(k.chaveId)} 
+                disabled={deletingId === k.chaveId}
+                className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors disabled:opacity-50"
+                title="Excluir chave PIX"
               >
-                <Trash2 className="w-5 h-5" />
+                {deletingId === k.chaveId ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-red-600" />
+                ) : (
+                  <Trash2 className="w-5 h-5" />
+                )}
               </button>
             </div>
           ))
@@ -201,7 +238,7 @@ export function PixKeysManager() {
         <Button 
           type="button"
           onClick={handleAddCpfKey}
-          disabled={addingKey || loading || !user?.document || hasCpfKey}
+          disabled={addingKey || loading || !user?.document || hasCpfKey || isLimitReached}
           className="w-full bg-black hover:bg-gray-900 text-white gap-2 h-11 disabled:opacity-50"
         >
           {addingKey ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
@@ -210,7 +247,7 @@ export function PixKeysManager() {
         <Button 
           type="button"
           onClick={handleAddEmailKey}
-          disabled={addingKey || loading || !user?.email || hasEmailKey}
+          disabled={addingKey || loading || !user?.email || hasEmailKey || isLimitReached}
           className="w-full bg-gray-800 hover:bg-black text-white gap-2 h-11 disabled:opacity-50"
         >
           {addingKey ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
@@ -219,19 +256,20 @@ export function PixKeysManager() {
         <Button 
           type="button"
           onClick={handleAddRandomKey}
-          disabled={addingKey || loading}
-          className="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 gap-2 h-11 border-none"
+          disabled={addingKey || loading || isLimitReached}
+          className="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 gap-2 h-11 border-none disabled:opacity-50"
         >
           {addingKey ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
           Gerar Chave Aleatória (EVP)
         </Button>
       </div>
 
-      <div className="bg-gray-50 border border-gray-100 rounded-lg p-4 flex gap-3 text-gray-500 text-xs items-center">
-        <Info className="w-4 h-4 shrink-0" />
-        <p>
-          Você pode cadastrar até 5 chaves nesta conta de pessoa física.
-        </p>
+      <div className="bg-gray-50 border border-gray-100 rounded-lg p-4 flex items-center justify-between text-gray-500 text-xs">
+        <div className="flex gap-2 items-center">
+          <Info className="w-4 h-4 shrink-0" />
+          <span>Você pode cadastrar até 5 chaves nesta conta de pessoa física.</span>
+        </div>
+        <span className="font-semibold text-gray-700">{keys.length}/5</span>
       </div>
     </div>
   );

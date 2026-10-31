@@ -59,6 +59,15 @@ export class PixKeyService {
   async generateRandomKey(contaId: string, usuarioId: string) {
     await this.validarContaUsuario(contaId, usuarioId);
 
+    const totalChaves = await this.prisma.chavePix.count({
+      where: { contaId, status: 'ATIVA' },
+    });
+    if (totalChaves >= 5) {
+      throw new BadRequestException(
+        'Limite máximo de 5 chaves PIX ativas por conta atingido.',
+      );
+    }
+
     const [chave] = await this.prisma.$transaction([
       this.prisma.chavePix.create({
         data: {
@@ -85,6 +94,15 @@ export class PixKeyService {
 
     const { usuario } = await this.validarContaUsuario(contaId, usuarioId);
 
+    const totalChaves = await this.prisma.chavePix.count({
+      where: { contaId, status: 'ATIVA' },
+    });
+    if (totalChaves >= 5) {
+      throw new BadRequestException(
+        'Limite máximo de 5 chaves PIX ativas por conta atingido.',
+      );
+    }
+
     if (
       (tipoChave === TipoChavePix.CPF || tipoChave === TipoChavePix.CNPJ) &&
       valorChave.replace(/\D/g, '') !== usuario.cpfCnpj.replace(/\D/g, '')
@@ -107,6 +125,21 @@ export class PixKeyService {
       where: { valorChave },
     });
     if (chaveExistente) {
+      if (
+        chaveExistente.status === 'INATIVA' &&
+        chaveExistente.contaId === contaId
+      ) {
+        const [chaveReativada] = await this.prisma.$transaction([
+          this.prisma.chavePix.update({
+            where: { chaveId: chaveExistente.chaveId },
+            data: { status: 'ATIVA', dataCriacao: new Date() },
+          }),
+          this.prisma.logAtividade.create({
+            data: { acao: 'REATIVACAO DE CHAVE PIX', usuarioId },
+          }),
+        ]);
+        return chaveReativada;
+      }
       throw new ConflictException(
         'Esta chave PIX já está cadastrada no sistema.',
       );
@@ -127,6 +160,45 @@ export class PixKeyService {
     ]);
 
     return novaChave;
+  }
+
+  async inativarChavePix(id: string, contaId: string, usuarioId: string) {
+    await this.validarContaUsuario(contaId, usuarioId);
+
+    let chave = await this.prisma.chavePix.findUnique({
+      where: { chaveId: id },
+    });
+    if (!chave) {
+      chave = await this.prisma.chavePix.findUnique({
+        where: { valorChave: id },
+      });
+    }
+
+    if (!chave || chave.contaId !== contaId) {
+      throw new NotFoundException('Chave PIX não encontrada para esta conta.');
+    }
+
+    if (chave.status === 'INATIVA') {
+      throw new BadRequestException('Chave PIX já se encontra inativa.');
+    }
+
+    const [chaveAtualizada] = await this.prisma.$transaction([
+      this.prisma.chavePix.update({
+        where: { chaveId: chave.chaveId },
+        data: { status: 'INATIVA' },
+      }),
+      this.prisma.logAtividade.create({
+        data: {
+          acao: `INATIVACAO DE CHAVE PIX: ${chave.tipoChave}`,
+          usuarioId,
+        },
+      }),
+    ]);
+
+    return {
+      mensagem: 'Chave PIX inativada com sucesso.',
+      chave: chaveAtualizada,
+    };
   }
 
   async validarChavePix(valorChave: string) {
