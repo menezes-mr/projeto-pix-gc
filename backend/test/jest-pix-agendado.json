@@ -1,0 +1,12 @@
+{
+  "rootDir": "..",
+  "testRegex": "test/pix-agendado\\.integration-spec\\.ts$",
+  "testEnvironment": "node",
+  "testTimeout": 30000,
+  "transform": {
+    "^.+\\.(t|j)s$": ["ts-jest", { "tsconfig": { "allowJs": true } }]
+  },
+  "transformIgnorePatterns": [
+    "node_modules/(?!@nestjs/(event-emitter|jwt|schedule)/)"
+  ]
+}

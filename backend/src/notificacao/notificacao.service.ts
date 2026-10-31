@@ -25,7 +25,6 @@ export class NotificacaoService {
         this.notificarUsuario(usuario, `Você recebeu um PIX de R$ ${valor}.`);
       }
     } catch (error) {
-      // Falha na notificação nunca deve afetar o PIX já efetivado
       this.logger.error('Falha ao processar notificação de PIX', error);
     }
   }
