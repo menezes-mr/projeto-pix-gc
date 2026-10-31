@@ -38,10 +38,85 @@ export class RelatoriosService {
       .filter((item) => item.status === 'EFETIVADA')
       .reduce((soma, item) => soma + item.valorTotal, 0);
 
+    const transacoes = await this.prisma.transacaoPix.findMany({
+      where: {
+        OR: [
+          { dataEfetivacao: { gte: inicio, lte: fim } },
+          { dataAgendamento: { gte: inicio, lte: fim } },
+        ],
+      },
+      orderBy: { dataEfetivacao: 'desc' },
+      take: 50,
+      include: {
+        contaOrigem: {
+          include: {
+            usuarios: {
+              include: { usuario: true },
+            },
+          },
+        },
+        contaDestino: {
+          include: {
+            usuarios: {
+              include: { usuario: true },
+            },
+          },
+        },
+      },
+    });
+
     return {
       periodo: { dataInicio, dataFim },
       volumeTotalEfetivado,
       detalhamento,
+      transacoes: transacoes.map((t) => ({
+        transacaoId: t.transacaoId,
+        valor: Number(t.valor),
+        tipoOperacao: t.tipoOperacao,
+        status: t.status,
+        chavePixUtilizada: t.chavePixUtilizada,
+        dataEfetivacao: t.dataEfetivacao,
+        dataAgendamento: t.dataAgendamento,
+        origemTitular:
+          t.contaOrigem?.usuarios[0]?.usuario?.nomeCompleto || 'Origem Externa',
+        destinoTitular:
+          t.contaDestino?.usuarios[0]?.usuario?.nomeCompleto ||
+          'Destino Externo',
+        contaOrigemId: t.contaOrigemId,
+        contaDestinoId: t.contaDestinoId,
+      })),
     };
+  }
+
+  async listarTodasContas() {
+    const contas = await this.prisma.conta.findMany({
+      orderBy: { dataCriacao: 'desc' },
+      include: {
+        usuarios: {
+          include: { usuario: true },
+        },
+        chavesPix: {
+          where: { status: 'ATIVA' },
+        },
+      },
+    });
+
+    return contas.map((conta) => ({
+      contaId: conta.contaId,
+      numeroConta: conta.numeroConta,
+      saldo: Number(conta.saldo),
+      limiteDiarioPix: Number(conta.limiteDiarioPix),
+      status: conta.status,
+      dataCriacao: conta.dataCriacao,
+      titular: conta.usuarios[0]?.usuario
+        ? {
+            nomeCompleto: conta.usuarios[0].usuario.nomeCompleto,
+            cpfCnpj: conta.usuarios[0].usuario.cpfCnpj,
+            email: conta.usuarios[0].usuario.email,
+            usuarioId: conta.usuarios[0].usuario.usuarioId,
+          }
+        : null,
+      totalChaves: conta.chavesPix.length,
+    }));
   }
 }

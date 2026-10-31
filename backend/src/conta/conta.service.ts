@@ -405,6 +405,9 @@ export class ContaService {
   async bloquearContaPorFraude(contaId: string, dto: BloquearContaDto) {
     const conta = await this.prisma.conta.findUnique({
       where: { contaId },
+      include: {
+        usuarios: true,
+      },
     });
 
     if (!conta) {
@@ -431,13 +434,20 @@ export class ContaService {
       });
 
       const detalheMotivo = dto.motivo ? ` | Motivo: ${dto.motivo}` : '';
-
-      await tx.logAtividade.create({
-        data: {
-          usuarioId: dto.usuarioId,
-          acao: `BLOQUEIO_POR_FRAUDE${detalheMotivo}`,
-        },
+      const usuarioValido = await tx.usuario.findUnique({
+        where: { usuarioId: dto.usuarioId },
       });
+      const idUsuarioParaLog =
+        usuarioValido?.usuarioId ?? conta.usuarios[0]?.usuarioId;
+
+      if (idUsuarioParaLog) {
+        await tx.logAtividade.create({
+          data: {
+            usuarioId: idUsuarioParaLog,
+            acao: `BLOQUEIO_POR_FRAUDE${detalheMotivo}`,
+          },
+        });
+      }
 
       return {
         mensagem: 'Conta bloqueada por suspeita de fraude com sucesso.',

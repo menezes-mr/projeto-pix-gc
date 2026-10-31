@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Zap, FileText, User, Bell, LogOut } from "lucide-react";
+import { Home, Zap, FileText, User, Bell, LogOut, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 
@@ -68,6 +68,13 @@ export function Header() {
       </nav>
 
       <div className="flex items-center gap-2">
+        <Link
+          href="/admin"
+          title="Painel Administrativo"
+          className="p-2 rounded-full bg-indigo-50 hover:bg-indigo-100 transition-colors text-indigo-700"
+        >
+          <Shield className="w-5 h-5" />
+        </Link>
         <button
           type="button"
           onClick={(e) => e.preventDefault()}
