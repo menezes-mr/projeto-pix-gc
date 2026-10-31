@@ -6,6 +6,15 @@ interface PasswordStrengthProps {
   password?: string;
 }
 
+export function isPasswordStrong(password: string): boolean {
+  return (
+    password.length >= 8 &&
+    /\d/.test(password) &&
+    /[A-Z]/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  );
+}
+
 export function PasswordStrength({ password = '' }: PasswordStrengthProps) {
   const rules = [
     { label: 'Mín. 8 caracteres', test: (p: string) => p.length >= 8 },

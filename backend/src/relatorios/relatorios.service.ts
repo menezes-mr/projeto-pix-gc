@@ -10,7 +10,9 @@ export class RelatoriosService {
     const fim = new Date(dataFim);
 
     if (fim < inicio) {
-      throw new BadRequestException('dataFim não pode ser anterior a dataInicio');
+      throw new BadRequestException(
+        'dataFim não pode ser anterior a dataInicio',
+      );
     }
 
     const relatorioBruto = await this.prisma.transacaoPix.groupBy({

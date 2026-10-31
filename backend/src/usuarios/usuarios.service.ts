@@ -14,7 +14,16 @@ export class UsuariosService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createUsuarioDto: CreateUsuarioDto) {
-    const { nomeCompleto, email, cpfCnpj, telefone, senha } = createUsuarioDto;
+    const {
+      nomeCompleto,
+      email,
+      cpfCnpj,
+      telefone,
+      senha,
+      receberSms,
+      receberEmail,
+      receberPush,
+    } = createUsuarioDto;
 
     const usuarioExistente = await this.prisma.usuario.findFirst({
       where: {
@@ -25,6 +34,17 @@ export class UsuariosService {
     if (usuarioExistente) {
       throw new ConflictException(
         'CPF/CNPJ ou Email já cadastrados no sistema',
+      );
+    }
+
+    if (
+      senha.length < 8 ||
+      !/[A-Z]/.test(senha) ||
+      !/\d/.test(senha) ||
+      !/[^A-Za-z0-9]/.test(senha)
+    ) {
+      throw new BadRequestException(
+        'A senha deve conter no mínimo 8 caracteres, pelo menos uma letra maiúscula, um número e um caractere especial.',
       );
     }
 
@@ -40,6 +60,28 @@ export class UsuariosService {
           telefone,
           senha: senhaHash,
           status: 'ATIVO',
+          receberSms: Boolean(receberSms),
+          receberEmail: Boolean(receberEmail),
+          receberPush: Boolean(receberPush),
+        },
+      });
+
+      const numeroConta = `${Math.floor(100000 + Math.random() * 900000)}-${Math.floor(Math.random() * 10)}`;
+      const conta = await tx.conta.create({
+        data: {
+          agencia: '0001',
+          numeroConta,
+          saldo: 0.0,
+          limiteDiarioPix: 1000.0,
+          status: 'ATIVA',
+        },
+      });
+
+      await tx.usuarioConta.create({
+        data: {
+          usuarioId: usuario.usuarioId,
+          contaId: conta.contaId,
+          papel: 'TITULAR',
         },
       });
 
@@ -53,8 +95,8 @@ export class UsuariosService {
       return usuario;
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { senha: _, ...usuarioSemSenha } = novoUsuario;
+    const usuarioSemSenha = { ...novoUsuario };
+    delete (usuarioSemSenha as { senha?: string }).senha;
     return usuarioSemSenha;
   }
 
@@ -83,6 +125,20 @@ export class UsuariosService {
           'O e-mail informado já está em uso por outro usuário',
         );
       }
+    }
+
+    if (updateUsuarioDto.senha) {
+      if (
+        updateUsuarioDto.senha.length < 8 ||
+        !/[A-Z]/.test(updateUsuarioDto.senha) ||
+        !/\d/.test(updateUsuarioDto.senha) ||
+        !/[^A-Za-z0-9]/.test(updateUsuarioDto.senha)
+      ) {
+        throw new BadRequestException(
+          'A senha deve conter no mínimo 8 caracteres, pelo menos uma letra maiúscula, um número e um caractere especial.',
+        );
+      }
+      updateUsuarioDto.senha = await bcrypt.hash(updateUsuarioDto.senha, 10);
     }
 
     const usuarioAtualizado = await this.prisma.$transaction(async (tx) => {

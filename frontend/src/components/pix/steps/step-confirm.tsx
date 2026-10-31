@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { CheckCircle2, Lock } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/auth-context";
 
 interface Recipient {
   chavePix: string;

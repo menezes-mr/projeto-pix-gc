@@ -13,7 +13,7 @@ export function ProfileHeader() {
           {user?.name || "Usuário"}
         </h2>
         <p className="text-sm text-gray-500">
-          BancoDigital Ag 0001 • C/C 84920-1 • Titular Pessoa Física
+          BancoDigital Ag {user?.agency || "0001"} • C/C {user?.accountNumber || "---"} • Titular Pessoa Física
         </p>
       </div>
     </div>

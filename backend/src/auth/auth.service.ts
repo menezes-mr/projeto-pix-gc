@@ -16,10 +16,7 @@ export class AuthService {
 
     const usuario = await this.prisma.usuario.findFirst({
       where: {
-        OR: [
-          { email: identificador },
-          { cpfCnpj: identificador },
-        ],
+        OR: [{ email: identificador }, { cpfCnpj: identificador }],
         status: 'ATIVO',
       },
       include: {
@@ -39,11 +36,35 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    const contaId = usuario.contas[0]?.contaId || null;
-    const saldo = usuario.contas[0]?.conta?.saldo || 0;
+    let conta = usuario.contas[0]?.conta;
+    let contaId = usuario.contas[0]?.contaId || null;
+
+    if (!contaId || !conta) {
+      const numeroConta = `${Math.floor(100000 + Math.random() * 900000)}-${Math.floor(Math.random() * 10)}`;
+      const novaConta = await this.prisma.conta.create({
+        data: {
+          agencia: '0001',
+          numeroConta,
+          saldo: 0.0,
+          limiteDiarioPix: 1000.0,
+          status: 'ATIVA',
+        },
+      });
+
+      await this.prisma.usuarioConta.create({
+        data: {
+          usuarioId: usuario.usuarioId,
+          contaId: novaConta.contaId,
+          papel: 'TITULAR',
+        },
+      });
+
+      contaId = novaConta.contaId;
+      conta = novaConta;
+    }
 
     const payload = { sub: usuario.usuarioId, email: usuario.email, contaId };
-    
+
     return {
       access_token: this.jwtService.sign(payload),
       usuario: {
@@ -53,7 +74,13 @@ export class AuthService {
         documento: usuario.cpfCnpj,
         telefone: usuario.telefone,
         contaId,
-        saldo: Number(saldo),
+        saldo: Number(conta.saldo),
+        agencia: conta.agencia,
+        numeroConta: conta.numeroConta,
+        limiteDiarioPix: Number(conta.limiteDiarioPix),
+        receberSms: usuario.receberSms,
+        receberEmail: usuario.receberEmail,
+        receberPush: usuario.receberPush,
       },
     };
   }

@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { Lock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
+import { useAuth } from "@/contexts/auth-context";
+import axios from "axios";
 import { api } from "@/lib/api";
 
 interface Recipient {
@@ -12,6 +13,7 @@ interface Recipient {
   tipoChave: string;
   nomeCompleto: string;
   documentoMascarado: string;
+  contaId?: string;
 }
 
 interface StepKeyProps {
@@ -19,22 +21,43 @@ interface StepKeyProps {
 }
 
 export function StepKey({ onNext }: StepKeyProps) {
+  const { user } = useAuth();
   const [pixKey, setPixKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pixKey.trim().length <= 3) return;
+    const trimmed = pixKey.trim();
+    if (trimmed.length <= 3) return;
+
+    if (
+      (user?.document && trimmed.replace(/\D/g, "") === user.document.replace(/\D/g, "")) ||
+      (user?.email && trimmed.toLowerCase() === user.email.toLowerCase())
+    ) {
+      setError("Você não pode transferir para si mesmo (sua própria chave PIX).");
+      return;
+    }
     
     setLoading(true);
     setError("");
     
     try {
-      const response = await api.get(`/pix/chaves/${encodeURIComponent(pixKey)}`);
-      onNext(response.data as Recipient);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Chave PIX não encontrada.");
+      const response = await api.get(`/pix/chaves/${encodeURIComponent(trimmed)}`);
+      const data = response.data as Recipient;
+
+      if (data.contaId && user?.contaId && data.contaId === user.contaId) {
+        setError("Você não pode transferir para a sua própria conta bancária.");
+        return;
+      }
+
+      onNext(data);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Chave PIX não encontrada.");
+      } else {
+        setError("Chave PIX não encontrada.");
+      }
     } finally {
       setLoading(false);
     }

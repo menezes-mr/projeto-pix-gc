@@ -1,22 +1,40 @@
 "use client";
 
 import React, { useState } from "react";
-import { SlidersHorizontal, Wallet } from "lucide-react";
+import { SlidersHorizontal, Wallet, Loader2, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 
 export function LimitsCard() {
-  const { user } = useAuth();
-  const [pixLimit, setPixLimit] = useState(3100);
+  const { user, updateDailyLimit } = useAuth();
+  const [pixLimit, setPixLimit] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  const formattedBalance = user?.balance?.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }) || "R$ 50,00";
+  const currentLimit = pixLimit ?? (user?.dailyLimit ?? 1000);
 
-  const formattedLimit = pixLimit.toLocaleString("pt-BR", {
+  const formattedBalance = (user?.balance ?? 0).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
+
+  const formattedLimit = currentLimit.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaved(false);
+    try {
+      await updateDailyLimit(currentLimit);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch {
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col gap-6">
@@ -50,8 +68,11 @@ export function LimitsCard() {
           min="0" 
           max="5000" 
           step="100"
-          value={pixLimit} 
-          onChange={(e) => setPixLimit(Number(e.target.value))}
+          value={currentLimit} 
+          onChange={(e) => {
+            setPixLimit(Number(e.target.value));
+            setSaved(false);
+          }}
           className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
         />
         
@@ -59,6 +80,25 @@ export function LimitsCard() {
           <span>R$ 0</span>
           <span>R$ 5.000,00</span>
         </div>
+      </div>
+
+      {saved && (
+        <div className="bg-emerald-50 text-emerald-700 p-3 rounded-lg flex items-center gap-2 text-sm">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>Limite atualizado com sucesso!</span>
+        </div>
+      )}
+
+      <div className="flex justify-end mt-1">
+        <Button 
+          type="button"
+          onClick={handleSave} 
+          disabled={saving || currentLimit === user?.dailyLimit}
+          className="bg-indigo-600 hover:bg-indigo-700 gap-2"
+        >
+          {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+          {saving ? "Salvando..." : "Salvar Limite"}
+        </Button>
       </div>
     </div>
   );

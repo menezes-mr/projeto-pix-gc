@@ -3,12 +3,20 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { api } from "@/lib/api";
 
-interface User {
+export interface User {
+  id: string;
   name: string;
   document?: string;
   email?: string;
   phone?: string;
   balance: number;
+  contaId?: string | null;
+  agency?: string;
+  accountNumber?: string;
+  dailyLimit?: number;
+  receberSms?: boolean;
+  receberEmail?: boolean;
+  receberPush?: boolean;
 }
 
 interface LoginData {
@@ -20,23 +28,45 @@ interface RegistrationData extends LoginData {
   name: string;
   email: string;
   phone?: string;
+  receberSms?: boolean;
+  receberEmail?: boolean;
+  receberPush?: boolean;
 }
 
 interface LoginResponse {
   access_token: string;
   usuario: {
+    id: string;
     nome: string;
     documento: string;
     email: string;
     telefone: string | null;
     saldo: number;
+    contaId: string | null;
+    agencia?: string;
+    numeroConta?: string;
+    limiteDiarioPix?: number;
+    receberSms?: boolean;
+    receberEmail?: boolean;
+    receberPush?: boolean;
   };
 }
 
 interface AuthContextType {
   user: User | null;
+  loading: boolean;
   login: (userData: LoginData) => Promise<void>;
   register: (userData: RegistrationData) => Promise<void>;
+  refreshAccount: () => Promise<void>;
+  updateProfile: (data: {
+    email?: string;
+    phone?: string;
+    name?: string;
+    receberSms?: boolean;
+    receberEmail?: boolean;
+    receberPush?: boolean;
+  }) => Promise<void>;
+  updateDailyLimit: (newLimit: number) => Promise<void>;
   logout: () => void;
 }
 
@@ -44,19 +74,117 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const storedToken = localStorage.getItem("pix_token");
     const storedUser = localStorage.getItem("pix_user");
     
     if (storedToken && storedUser) {
-      const { name, document, email, phone, balance } = JSON.parse(storedUser) as User;
-      const storedProfile = { name, document, email, phone, balance };
-      localStorage.setItem("pix_user", JSON.stringify(storedProfile));
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setUser(storedProfile);
+      try {
+        const parsed = JSON.parse(storedUser) as User;
+        setTimeout(() => {
+          setUser(parsed);
+          setLoading(false);
+        }, 0);
+
+        if (parsed.contaId) {
+          api.get(`/contas/${parsed.contaId}`)
+            .then((res) => {
+              const updated: User = {
+                ...parsed,
+                balance: Number(res.data.saldo),
+                agency: res.data.agencia,
+                accountNumber: res.data.numeroConta,
+                dailyLimit: Number(res.data.limiteDiarioPix),
+              };
+              setUser(updated);
+              localStorage.setItem("pix_user", JSON.stringify(updated));
+            })
+            .catch(() => {});
+        }
+      } catch {
+        localStorage.removeItem("pix_user");
+        localStorage.removeItem("pix_token");
+        setTimeout(() => {
+          setLoading(false);
+        }, 0);
+      }
+    } else {
+      setTimeout(() => {
+        setLoading(false);
+      }, 0);
     }
   }, []);
+
+  const refreshAccount = async () => {
+    if (!user?.contaId) return;
+    try {
+      const res = await api.get(`/contas/${user.contaId}`);
+      setUser((prev) => {
+        if (!prev) return null;
+        const updated: User = {
+          ...prev,
+          balance: Number(res.data.saldo),
+          agency: res.data.agencia,
+          accountNumber: res.data.numeroConta,
+          dailyLimit: Number(res.data.limiteDiarioPix),
+        };
+        localStorage.setItem("pix_user", JSON.stringify(updated));
+        return updated;
+      });
+    } catch {}
+  };
+
+  const updateProfile = async (data: {
+    email?: string;
+    phone?: string;
+    name?: string;
+    receberSms?: boolean;
+    receberEmail?: boolean;
+    receberPush?: boolean;
+  }) => {
+    if (!user?.id) return;
+    const res = await api.patch(`/usuarios/${user.id}`, {
+      ...(data.name && { nomeCompleto: data.name }),
+      ...(data.email && { email: data.email }),
+      ...(data.phone !== undefined && { telefone: data.phone.replace(/\D/g, "") }),
+      ...(data.receberSms !== undefined && { receberSms: data.receberSms }),
+      ...(data.receberEmail !== undefined && { receberEmail: data.receberEmail }),
+      ...(data.receberPush !== undefined && { receberPush: data.receberPush }),
+    });
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated: User = {
+        ...prev,
+        name: res.data.nomeCompleto || prev.name,
+        email: res.data.email || prev.email,
+        phone: res.data.telefone || prev.phone,
+        receberSms: res.data.receberSms !== undefined ? res.data.receberSms : prev.receberSms,
+        receberEmail: res.data.receberEmail !== undefined ? res.data.receberEmail : prev.receberEmail,
+        receberPush: res.data.receberPush !== undefined ? res.data.receberPush : prev.receberPush,
+      };
+      localStorage.setItem("pix_user", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const updateDailyLimit = async (newLimit: number) => {
+    if (!user?.contaId) return;
+    const res = await api.patch(`/contas/${user.contaId}`, {
+      limiteDiarioPix: newLimit,
+      usuarioId: user.id,
+    });
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated: User = {
+        ...prev,
+        dailyLimit: Number(res.data.limiteDiarioPix),
+      };
+      localStorage.setItem("pix_user", JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   const login = async ({ document, password }: LoginData) => {
     const identifier = document.trim();
@@ -66,11 +194,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     const { access_token, usuario } = response.data;
     const mappedUser: User = {
+      id: usuario.id,
       name: usuario.nome,
       document: usuario.documento,
       email: usuario.email,
       phone: usuario.telefone ?? undefined,
       balance: usuario.saldo,
+      contaId: usuario.contaId,
+      agency: usuario.agencia || "0001",
+      accountNumber: usuario.numeroConta || "",
+      dailyLimit: usuario.limiteDiarioPix || 1000,
+      receberSms: usuario.receberSms ?? false,
+      receberEmail: usuario.receberEmail ?? false,
+      receberPush: usuario.receberPush ?? false,
     };
 
     localStorage.setItem("pix_token", access_token);
@@ -88,6 +224,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       cpfCnpj: document,
       telefone: phone || undefined,
       senha: userData.password,
+      receberSms: userData.receberSms ?? false,
+      receberEmail: userData.receberEmail ?? false,
+      receberPush: userData.receberPush ?? false,
     });
 
     try {
@@ -104,7 +243,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, refreshAccount, updateProfile, updateDailyLimit, logout }}>
       {children}
     </AuthContext.Provider>
   );

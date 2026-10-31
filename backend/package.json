@@ -18,7 +18,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "test:pix-agendado": "jest --config ./test/jest-pix-agendado.json --runInBand"
+    "test:pix-agendado": "jest --config ./test/jest-pix-agendado.json --runInBand",
+    "prisma:studio": "prisma studio --port 5555"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -86,7 +87,7 @@
       ]
     },
     "transformIgnorePatterns": [
-      "node_modules/(?!@nestjs/(event-emitter|jwt|schedule)/)"
+      "node_modules/(?!@nestjs/(event-emitter|jwt|schedule|passport)/)"
     ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"

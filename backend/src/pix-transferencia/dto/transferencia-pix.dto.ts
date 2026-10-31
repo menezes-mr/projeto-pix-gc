@@ -22,7 +22,10 @@ export class TransferenciaPixDto {
   @IsOptional()
   @IsDateString(
     { strict: true },
-    { message: 'A data de agendamento deve ser uma data válida no formato ISO 8601' },
+    {
+      message:
+        'A data de agendamento deve ser uma data válida no formato ISO 8601',
+    },
   )
   dataAgendamento?: string;
 }
