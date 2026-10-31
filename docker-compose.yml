@@ -43,5 +43,20 @@ services:
     depends_on:
       - backend
 
+  studio:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pix_studio
+    command: npx prisma studio --port 5555 --hostname 0.0.0.0 --browser none
+    environment:
+      - DATABASE_URL=postgresql://pix_user:pix_password@db:5432/pix_db?schema=public
+      - DIRECT_URL=postgresql://pix_user:pix_password@db:5432/pix_db?schema=public
+    ports:
+      - "5555:5555"
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   pix_postgres_data:

@@ -51,9 +51,17 @@ projeto-pix-gc/
    * **Frontend:** [http://localhost:3000](http://localhost:3000)
    * **Backend API:** [http://localhost:3333](http://localhost:3333)
    * **Documentação Swagger:** [http://localhost:3333/docs](http://localhost:3333/docs)
+   * **Prisma Studio (Banco de Dados Visual):** [http://localhost:5555](http://localhost:5555)
    * **PostgreSQL:** `localhost:5432` (banco: `pix_db`, usuário: `pix_user`)
 
 ## Comandos Úteis
+
+### Visualizar Banco de Dados (Prisma Studio)
+* **Via Docker (ativo por padrão):** [http://localhost:5555](http://localhost:5555)
+* **Via terminal local (host):**
+  ```bash
+  cd backend && npm run prisma:studio
+  ```
 
 ### Ver logs dos containers
 ```bash
