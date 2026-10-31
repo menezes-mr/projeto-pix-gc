@@ -79,7 +79,7 @@ export default function AdminPage() {
     }
     return false;
   });
-  const [username, setUsername] = useState("admin");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [activeTab, setActiveTab] = useState<"relatorios" | "antifraude">("relatorios");
@@ -108,7 +108,7 @@ export default function AdminPage() {
       sessionStorage.setItem("admin_session", "true");
       setIsAdmin(true);
     } else {
-      setLoginError("Credenciais inválidas. Use admin / admin123 para demonstração.");
+      setLoginError("Credenciais de acesso inválidas.");
     }
   };
 
@@ -313,7 +313,7 @@ export default function AdminPage() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="admin"
+                  placeholder="Digite o usuário"
                   required
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
                 />
@@ -336,17 +336,6 @@ export default function AdminPage() {
                 />
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setUsername("admin");
-                setPassword("admin123");
-              }}
-              className="text-xs text-indigo-400 hover:text-indigo-300 text-left transition-colors cursor-pointer"
-            >
-              Usar credenciais de demonstração (admin / admin123)
-            </button>
 
             <button
               type="submit"
