@@ -14,7 +14,7 @@ export class CreateChavePixDto {
 
   @IsString()
   @IsNotEmpty()
-  @ValidateIf((o) => o.tipoChave === TipoChavePix.EMAIL)
+  @ValidateIf((o: CreateChavePixDto) => o.tipoChave === TipoChavePix.EMAIL)
   @IsEmail({}, { message: 'O valor da chave deve ser um email válido' })
   valorChave: string;
 

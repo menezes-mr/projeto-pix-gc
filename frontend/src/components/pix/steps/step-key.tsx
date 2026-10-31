@@ -5,6 +5,7 @@ import { Lock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
+import axios from "axios";
 import { api } from "@/lib/api";
 
 interface Recipient {
@@ -33,8 +34,12 @@ export function StepKey({ onNext }: StepKeyProps) {
     try {
       const response = await api.get(`/pix/chaves/${encodeURIComponent(pixKey)}`);
       onNext(response.data as Recipient);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Chave PIX não encontrada.");
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Chave PIX não encontrada.");
+      } else {
+        setError("Chave PIX não encontrada.");
+      }
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { IdCard, Mail, Trash2, Plus, Sparkles, Info, Loader2, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
@@ -17,11 +17,7 @@ export function PixKeysManager() {
   const [loading, setLoading] = useState(true);
   const [addingKey, setAddingKey] = useState(false);
 
-  useEffect(() => {
-    fetchKeys();
-  }, []);
-
-  const fetchKeys = async () => {
+  const loadKeys = useCallback(async () => {
     try {
       const response = await api.get('/pix/chaves/minhas');
       setKeys(response.data as PixKey[]);
@@ -30,13 +26,35 @@ export function PixKeysManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    api.get('/pix/chaves/minhas')
+      .then((response) => {
+        if (isMounted) {
+          setKeys(response.data as PixKey[]);
+        }
+      })
+      .catch((error) => {
+        console.error("Erro ao buscar chaves", error);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleAddRandomKey = async () => {
     setAddingKey(true);
     try {
       await api.post('/pix/chaves/aleatoria', {});
-      fetchKeys();
+      await loadKeys();
     } catch (error) {
       console.error("Erro ao gerar chave", error);
     } finally {

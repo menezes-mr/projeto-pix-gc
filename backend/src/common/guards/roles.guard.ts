@@ -4,11 +4,12 @@ import {
   Injectable,
   ForbiddenException,
 } from '@nestjs/common';
+import type { Request } from 'express';
 
 @Injectable()
 export class AdminRoleGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<Request>();
     const userRole = request.headers['x-user-role'];
 
     if (userRole !== 'ADMIN') {

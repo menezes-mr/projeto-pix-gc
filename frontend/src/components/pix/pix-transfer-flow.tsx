@@ -7,8 +7,8 @@ import { StepValue } from "./steps/step-value";
 import { StepConfirm } from "./steps/step-confirm";
 import { Button } from "@/components/ui/button";
 
+import axios from "axios";
 import { api } from "@/lib/api";
-import { useAuth } from "@/contexts/auth-context";
 
 interface Recipient {
   chavePix: string;
@@ -18,7 +18,6 @@ interface Recipient {
 }
 
 export function PixTransferFlow() {
-  const { user } = useAuth();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [recipient, setRecipient] = useState<Recipient | null>(null);
   const [amount, setAmount] = useState(0);
@@ -35,7 +34,7 @@ export function PixTransferFlow() {
     setStep(3);
   };
 
-  const handleConfirm = async (password: string) => {
+  const handleConfirm = async () => {
     if (!recipient) return;
     setLoading(true);
     setError("");
@@ -45,8 +44,12 @@ export function PixTransferFlow() {
         valor: amount,
       });
       setStep(4);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Erro ao transferir");
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Erro ao transferir");
+      } else {
+        setError("Erro ao transferir");
+      }
     } finally {
       setLoading(false);
     }

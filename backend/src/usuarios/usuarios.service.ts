@@ -53,8 +53,8 @@ export class UsuariosService {
       return usuario;
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { senha: _, ...usuarioSemSenha } = novoUsuario;
+    const usuarioSemSenha = { ...novoUsuario };
+    delete (usuarioSemSenha as { senha?: string }).senha;
     return usuarioSemSenha;
   }
 

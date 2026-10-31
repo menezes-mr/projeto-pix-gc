@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
-import { CreateChavePixDto } from './dto/create-chave-pix.dto';
+import { CreateChavePixDto, TipoChavePix } from './dto/create-chave-pix.dto';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -68,11 +68,11 @@ export class PixKeyService {
     const { tipoChave, valorChave, contaId, usuarioId } = dto;
     const { usuario } = await this.validarContaUsuario(contaId, usuarioId);
 
-    if ((tipoChave === 'CPF' || tipoChave === 'CNPJ') && valorChave !== usuario.cpfCnpj) {
+    if ((tipoChave === TipoChavePix.CPF || tipoChave === TipoChavePix.CNPJ) && valorChave !== usuario.cpfCnpj) {
       throw new BadRequestException(`O valor fornecido não corresponde ao ${tipoChave} cadastrado para o usuário.`);
     }
 
-    if (tipoChave === 'EMAIL' && valorChave !== usuario.email) {
+    if (tipoChave === TipoChavePix.EMAIL && valorChave !== usuario.email) {
       throw new BadRequestException('O valor fornecido não corresponde ao EMAIL cadastrado para o usuário.');
     }
 

@@ -4,11 +4,14 @@ import {
   INestApplication,
   NotFoundException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { JwtModule, JwtService } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { Test } from '@nestjs/testing';
 import type { Server } from 'node:http';
 import request from 'supertest';
 import { PrismaService } from '../prisma/prisma.service';
+import { JwtStrategy } from '../auth/jwt.strategy';
+import { UsuariosService } from '../usuarios/usuarios.service';
 import { PixAgendadoModule } from './pix-agendado.module';
 import { PixAgendadoService } from './pix-agendado.service';
 
@@ -23,7 +26,23 @@ describe('PATCH /pix/agendamentos/:id/cancelar', () => {
   beforeAll(async () => {
     process.env.JWT_SECRET = secret;
     const modulo = await Test.createTestingModule({
-      imports: [PixAgendadoModule],
+      imports: [
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        JwtModule.register({ secret }),
+        PixAgendadoModule,
+      ],
+      providers: [
+        JwtStrategy,
+        {
+          provide: UsuariosService,
+          useValue: {
+            findOne: jest.fn().mockResolvedValue({
+              usuarioId: 'usuario-autenticado',
+              status: 'ATIVO',
+            }),
+          },
+        },
+      ],
     })
       .overrideProvider(PrismaService)
       .useValue({})

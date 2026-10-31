@@ -1,6 +1,5 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Get, Param, UseGuards, Req } from '@nestjs/common';
 import { PixKeyService } from './pix-key.service';
-import { CreateRandomKeyDto } from './dto/create.random.key.dto';
 import { CreateChavePixDto } from './dto/create-chave-pix.dto';
 import { JwtAuthGuard, RequestAutenticada } from '../auth/jwt-auth.guard';
 

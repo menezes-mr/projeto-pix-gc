@@ -10,6 +10,7 @@ import { PixTransferenciaModule } from './pix-transferencia/pix-transferencia.mo
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { NotificacaoModule } from './notificacao/notificacao.module';
 import { AuthModule } from './auth/auth.module';
+import { RelatoriosModule } from './relatorios/relatorios.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AuthModule } from './auth/auth.module';
     PixTransferenciaModule,
     NotificacaoModule,
     AuthModule,
+    RelatoriosModule,
   ],
   controllers: [],
   providers: [],

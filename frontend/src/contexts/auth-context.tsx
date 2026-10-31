@@ -50,11 +50,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const storedUser = localStorage.getItem("pix_user");
     
     if (storedToken && storedUser) {
-      const { name, document, email, phone, balance } = JSON.parse(storedUser) as User;
-      const storedProfile = { name, document, email, phone, balance };
-      localStorage.setItem("pix_user", JSON.stringify(storedProfile));
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setUser(storedProfile);
+      try {
+        const { name, document, email, phone, balance } = JSON.parse(storedUser) as User;
+        const storedProfile = { name, document, email, phone, balance };
+        localStorage.setItem("pix_user", JSON.stringify(storedProfile));
+        setTimeout(() => {
+          setUser(storedProfile);
+        }, 0);
+      } catch {
+        localStorage.removeItem("pix_user");
+      }
     }
   }, []);
 
