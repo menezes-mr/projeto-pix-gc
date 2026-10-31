@@ -5,6 +5,7 @@ import {
   MinLength,
   Matches,
   IsOptional,
+  IsBoolean,
 } from 'class-validator';
 
 export class CreateUsuarioDto {
@@ -36,4 +37,16 @@ export class CreateUsuarioDto {
   @IsNotEmpty({ message: 'A senha é obrigatória' })
   @MinLength(8, { message: 'A senha deve ter no mínimo 8 caracteres' })
   senha!: string;
+
+  @IsBoolean()
+  @IsOptional()
+  receberSms?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  receberEmail?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  receberPush?: boolean;
 }

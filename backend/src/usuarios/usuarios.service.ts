@@ -14,7 +14,16 @@ export class UsuariosService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createUsuarioDto: CreateUsuarioDto) {
-    const { nomeCompleto, email, cpfCnpj, telefone, senha } = createUsuarioDto;
+    const {
+      nomeCompleto,
+      email,
+      cpfCnpj,
+      telefone,
+      senha,
+      receberSms,
+      receberEmail,
+      receberPush,
+    } = createUsuarioDto;
 
     const usuarioExistente = await this.prisma.usuario.findFirst({
       where: {
@@ -40,6 +49,9 @@ export class UsuariosService {
           telefone,
           senha: senhaHash,
           status: 'ATIVO',
+          receberSms: Boolean(receberSms),
+          receberEmail: Boolean(receberEmail),
+          receberPush: Boolean(receberPush),
         },
       });
 
@@ -48,7 +60,7 @@ export class UsuariosService {
         data: {
           agencia: '0001',
           numeroConta,
-          saldo: 1000.0,
+          saldo: 0.0,
           limiteDiarioPix: 1000.0,
           status: 'ATIVA',
         },

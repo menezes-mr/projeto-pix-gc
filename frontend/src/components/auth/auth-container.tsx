@@ -53,7 +53,16 @@ export function AuthContainer() {
     setIsSubmitting(true);
     try {
       if (mode === "register") {
-        await register({ name, email, document, phone, password });
+        await register({
+          name,
+          email,
+          document,
+          phone,
+          password,
+          receberSms: notificationSms,
+          receberEmail: notificationEmail,
+          receberPush: notificationPush,
+        });
       } else {
         await login({ document: loginIdentifier, password });
       }

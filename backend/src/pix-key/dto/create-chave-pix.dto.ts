@@ -5,6 +5,7 @@ import {
   IsUUID,
   ValidateIf,
   IsEmail,
+  IsOptional,
 } from 'class-validator';
 
 export enum TipoChavePix {
@@ -27,11 +28,11 @@ export class CreateChavePixDto {
   @IsEmail({}, { message: 'O valor da chave deve ser um email válido' })
   valorChave: string;
 
+  @IsOptional()
   @IsUUID()
-  @IsNotEmpty()
-  contaId: string;
+  contaId?: string;
 
+  @IsOptional()
   @IsUUID()
-  @IsNotEmpty()
-  usuarioId: string;
+  usuarioId?: string;
 }

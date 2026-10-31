@@ -40,7 +40,7 @@ export class PixKeyController {
     @Body() dto: CreateChavePixDto,
     @Req() req: RequestAutenticada,
   ) {
-    dto.contaId = req.user.contaId as string;
+    dto.contaId = req.user.contaId;
     dto.usuarioId = req.user.usuarioId;
     return this.pixKeyService.associarChavePix(dto);
   }

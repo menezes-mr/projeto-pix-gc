@@ -86,7 +86,13 @@ export class PixTransferenciaService {
 
       const chaveDestino = await tx.chavePix.findUnique({
         where: { valorChave: chavePixDestino },
-        include: { conta: true },
+        include: {
+          conta: {
+            include: {
+              usuarios: true,
+            },
+          },
+        },
       });
 
       if (
@@ -97,9 +103,12 @@ export class PixTransferenciaService {
         throw new NotFoundException('Chave PIX de destino inválida');
       }
 
-      if (chaveDestino.contaId === contaOrigemId) {
+      if (
+        chaveDestino.contaId === contaOrigemId ||
+        chaveDestino.conta.usuarios?.some((u) => u.usuarioId === usuarioId)
+      ) {
         throw new BadRequestException(
-          'Não é possível transferir para a própria conta',
+          'Não é possível transferir para você mesmo ou para a sua própria conta',
         );
       }
 

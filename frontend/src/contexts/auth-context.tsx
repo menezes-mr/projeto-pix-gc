@@ -14,6 +14,9 @@ export interface User {
   agency?: string;
   accountNumber?: string;
   dailyLimit?: number;
+  receberSms?: boolean;
+  receberEmail?: boolean;
+  receberPush?: boolean;
 }
 
 interface LoginData {
@@ -25,6 +28,9 @@ interface RegistrationData extends LoginData {
   name: string;
   email: string;
   phone?: string;
+  receberSms?: boolean;
+  receberEmail?: boolean;
+  receberPush?: boolean;
 }
 
 interface LoginResponse {
@@ -40,6 +46,9 @@ interface LoginResponse {
     agencia?: string;
     numeroConta?: string;
     limiteDiarioPix?: number;
+    receberSms?: boolean;
+    receberEmail?: boolean;
+    receberPush?: boolean;
   };
 }
 
@@ -49,7 +58,14 @@ interface AuthContextType {
   login: (userData: LoginData) => Promise<void>;
   register: (userData: RegistrationData) => Promise<void>;
   refreshAccount: () => Promise<void>;
-  updateProfile: (data: { email?: string; phone?: string; name?: string }) => Promise<void>;
+  updateProfile: (data: {
+    email?: string;
+    phone?: string;
+    name?: string;
+    receberSms?: boolean;
+    receberEmail?: boolean;
+    receberPush?: boolean;
+  }) => Promise<void>;
   updateDailyLimit: (newLimit: number) => Promise<void>;
   logout: () => void;
 }
@@ -120,12 +136,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   };
 
-  const updateProfile = async (data: { email?: string; phone?: string; name?: string }) => {
+  const updateProfile = async (data: {
+    email?: string;
+    phone?: string;
+    name?: string;
+    receberSms?: boolean;
+    receberEmail?: boolean;
+    receberPush?: boolean;
+  }) => {
     if (!user?.id) return;
     const res = await api.patch(`/usuarios/${user.id}`, {
       ...(data.name && { nomeCompleto: data.name }),
       ...(data.email && { email: data.email }),
-      ...(data.phone && { telefone: data.phone.replace(/\D/g, "") }),
+      ...(data.phone !== undefined && { telefone: data.phone.replace(/\D/g, "") }),
+      ...(data.receberSms !== undefined && { receberSms: data.receberSms }),
+      ...(data.receberEmail !== undefined && { receberEmail: data.receberEmail }),
+      ...(data.receberPush !== undefined && { receberPush: data.receberPush }),
     });
     setUser((prev) => {
       if (!prev) return null;
@@ -134,6 +160,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name: res.data.nomeCompleto || prev.name,
         email: res.data.email || prev.email,
         phone: res.data.telefone || prev.phone,
+        receberSms: res.data.receberSms !== undefined ? res.data.receberSms : prev.receberSms,
+        receberEmail: res.data.receberEmail !== undefined ? res.data.receberEmail : prev.receberEmail,
+        receberPush: res.data.receberPush !== undefined ? res.data.receberPush : prev.receberPush,
       };
       localStorage.setItem("pix_user", JSON.stringify(updated));
       return updated;
@@ -175,6 +204,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       agency: usuario.agencia || "0001",
       accountNumber: usuario.numeroConta || "",
       dailyLimit: usuario.limiteDiarioPix || 1000,
+      receberSms: usuario.receberSms ?? false,
+      receberEmail: usuario.receberEmail ?? false,
+      receberPush: usuario.receberPush ?? false,
     };
 
     localStorage.setItem("pix_token", access_token);
@@ -192,6 +224,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       cpfCnpj: document,
       telefone: phone || undefined,
       senha: userData.password,
+      receberSms: userData.receberSms ?? false,
+      receberEmail: userData.receberEmail ?? false,
+      receberPush: userData.receberPush ?? false,
     });
 
     try {

@@ -45,7 +45,7 @@ export class AuthService {
         data: {
           agencia: '0001',
           numeroConta,
-          saldo: 1000.0,
+          saldo: 0.0,
           limiteDiarioPix: 1000.0,
           status: 'ATIVA',
         },
@@ -78,6 +78,9 @@ export class AuthService {
         agencia: conta.agencia,
         numeroConta: conta.numeroConta,
         limiteDiarioPix: Number(conta.limiteDiarioPix),
+        receberSms: usuario.receberSms,
+        receberEmail: usuario.receberEmail,
+        receberPush: usuario.receberPush,
       },
     };
   }

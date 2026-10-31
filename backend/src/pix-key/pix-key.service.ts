@@ -79,18 +79,25 @@ export class PixKeyService {
 
   async associarChavePix(dto: CreateChavePixDto) {
     const { tipoChave, valorChave, contaId, usuarioId } = dto;
+    if (!contaId || !usuarioId) {
+      throw new BadRequestException('Conta e usuário são obrigatórios');
+    }
+
     const { usuario } = await this.validarContaUsuario(contaId, usuarioId);
 
     if (
       (tipoChave === TipoChavePix.CPF || tipoChave === TipoChavePix.CNPJ) &&
-      valorChave !== usuario.cpfCnpj
+      valorChave.replace(/\D/g, '') !== usuario.cpfCnpj.replace(/\D/g, '')
     ) {
       throw new BadRequestException(
         `O valor fornecido não corresponde ao ${tipoChave} cadastrado para o usuário.`,
       );
     }
 
-    if (tipoChave === TipoChavePix.EMAIL && valorChave !== usuario.email) {
+    if (
+      tipoChave === TipoChavePix.EMAIL &&
+      valorChave.trim().toLowerCase() !== usuario.email.trim().toLowerCase()
+    ) {
       throw new BadRequestException(
         'O valor fornecido não corresponde ao EMAIL cadastrado para o usuário.',
       );
@@ -153,6 +160,7 @@ export class PixKeyService {
       tipoChave: chave.tipoChave,
       nomeCompleto: usuario.nomeCompleto,
       documentoMascarado: this.mascararDocumento(usuario.cpfCnpj),
+      contaId: chave.contaId,
     };
   }
 }

@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { IdCard, Mail, Trash2, Plus, Sparkles, Info, Loader2, Key } from "lucide-react";
+import { IdCard, Mail, Trash2, Plus, Sparkles, Info, Loader2, Key, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
+import axios from "axios";
 
 interface PixKey {
   chaveId: string;
@@ -18,6 +19,10 @@ export function PixKeysManager() {
   const [keys, setKeys] = useState<PixKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingKey, setAddingKey] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "idle" | "success" | "error"; message: string }>({
+    type: "idle",
+    message: "",
+  });
 
   const loadKeys = useCallback(async () => {
     try {
@@ -54,11 +59,20 @@ export function PixKeysManager() {
 
   const handleAddRandomKey = async () => {
     setAddingKey(true);
+    setFeedback({ type: "idle", message: "" });
     try {
       await api.post('/pix/chaves/aleatoria', {});
+      setFeedback({ type: "success", message: "Chave aleatória gerada com sucesso!" });
       await loadKeys();
-    } catch (error) {
-      console.error("Erro ao gerar chave", error);
+    } catch (error: unknown) {
+      if (axios.isAxiosError<{ message?: string }>(error)) {
+        setFeedback({
+          type: "error",
+          message: error.response?.data?.message || "Erro ao gerar chave aleatória.",
+        });
+      } else {
+        setFeedback({ type: "error", message: "Erro ao gerar chave aleatória." });
+      }
     } finally {
       setAddingKey(false);
     }
@@ -67,18 +81,55 @@ export function PixKeysManager() {
   const handleAddCpfKey = async () => {
     if (!user?.document) return;
     setAddingKey(true);
+    setFeedback({ type: "idle", message: "" });
     try {
       await api.post('/pix/chaves', {
         tipoChave: 'CPF',
         valorChave: user.document.replace(/\D/g, ''),
       });
+      setFeedback({ type: "success", message: "Chave CPF vinculada com sucesso!" });
       await loadKeys();
-    } catch (error) {
-      console.error("Erro ao vincular CPF", error);
+    } catch (error: unknown) {
+      if (axios.isAxiosError<{ message?: string }>(error)) {
+        setFeedback({
+          type: "error",
+          message: error.response?.data?.message || "Erro ao vincular CPF.",
+        });
+      } else {
+        setFeedback({ type: "error", message: "Erro ao vincular CPF." });
+      }
     } finally {
       setAddingKey(false);
     }
   };
+
+  const handleAddEmailKey = async () => {
+    if (!user?.email) return;
+    setAddingKey(true);
+    setFeedback({ type: "idle", message: "" });
+    try {
+      await api.post('/pix/chaves', {
+        tipoChave: 'EMAIL',
+        valorChave: user.email.trim().toLowerCase(),
+      });
+      setFeedback({ type: "success", message: "Chave E-mail vinculada com sucesso!" });
+      await loadKeys();
+    } catch (error: unknown) {
+      if (axios.isAxiosError<{ message?: string }>(error)) {
+        setFeedback({
+          type: "error",
+          message: error.response?.data?.message || "Erro ao vincular E-mail.",
+        });
+      } else {
+        setFeedback({ type: "error", message: "Erro ao vincular E-mail." });
+      }
+    } finally {
+      setAddingKey(false);
+    }
+  };
+
+  const hasCpfKey = keys.some((k) => k.tipoChave === 'CPF');
+  const hasEmailKey = keys.some((k) => k.tipoChave === 'EMAIL');
 
   const getIcon = (type: string) => {
     if (type === 'CPF' || type === 'CNPJ') return <IdCard className="w-5 h-5" />;
@@ -94,6 +145,20 @@ export function PixKeysManager() {
           Gerencie suas chaves PIX cadastradas para receber transferências em tempo real.
         </p>
       </div>
+
+      {feedback.type === "success" && (
+        <div className="bg-emerald-50 text-emerald-700 p-3 rounded-lg flex items-center gap-2 text-sm">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>{feedback.message}</span>
+        </div>
+      )}
+
+      {feedback.type === "error" && (
+        <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center gap-2 text-sm">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{feedback.message}</span>
+        </div>
+      )}
 
       <div className="flex flex-col gap-4 min-h-[150px]">
         {loading ? (
@@ -132,23 +197,32 @@ export function PixKeysManager() {
         )}
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2.5">
         <Button 
           type="button"
           onClick={handleAddCpfKey}
-          disabled={addingKey || loading || !user?.document}
-          className="w-full bg-black hover:bg-gray-900 text-white gap-2 h-12"
+          disabled={addingKey || loading || !user?.document || hasCpfKey}
+          className="w-full bg-black hover:bg-gray-900 text-white gap-2 h-11 disabled:opacity-50"
         >
-          {addingKey ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-          Vincular Chave CPF ({user?.document || "Cadastrado"})
+          {addingKey ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          {hasCpfKey ? "CPF Já Vinculado" : `Vincular CPF (${user?.document || ""})`}
+        </Button>
+        <Button 
+          type="button"
+          onClick={handleAddEmailKey}
+          disabled={addingKey || loading || !user?.email || hasEmailKey}
+          className="w-full bg-gray-800 hover:bg-black text-white gap-2 h-11 disabled:opacity-50"
+        >
+          {addingKey ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          {hasEmailKey ? "E-mail Já Vinculado" : `Vincular E-mail (${user?.email || ""})`}
         </Button>
         <Button 
           type="button"
           onClick={handleAddRandomKey}
           disabled={addingKey || loading}
-          className="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 gap-2 h-12 border-none"
+          className="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 gap-2 h-11 border-none"
         >
-          {addingKey ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+          {addingKey ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
           Gerar Chave Aleatória (EVP)
         </Button>
       </div>
