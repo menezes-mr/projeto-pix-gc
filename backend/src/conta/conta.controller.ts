@@ -40,7 +40,8 @@ export class ContaController {
     const usuarioId = req.user?.usuarioId ?? req.user?.sub;
     const headerId = req.headers['x-usuario-id'];
     const idUsuarioLogado =
-      usuarioId ?? (typeof headerId === 'string' ? headerId : 'usuario-mock-id');
+      usuarioId ??
+      (typeof headerId === 'string' ? headerId : 'usuario-mock-id');
 
     return await this.contaService.consultarSaldo(contaId, idUsuarioLogado);
   }

@@ -12,7 +12,7 @@ async function bootstrap() {
     .setTitle('Projeto PIX GC')
     .setDescription('API do sistema de pagamentos PIX')
     .setVersion('1.0')
-    .addBearerAuth() 
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);

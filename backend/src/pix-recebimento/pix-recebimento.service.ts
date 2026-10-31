@@ -11,7 +11,7 @@ export class PixRecebimentoService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
-  ){}
+  ) {}
 
   async receberPix(
     chavePixDestino: string,
@@ -21,7 +21,7 @@ export class PixRecebimentoService {
     const transacaoExistente = await this.prisma.transacaoPix.findFirst({
       where: { transacaoExternaId },
     });
-    
+
     if (transacaoExistente) {
       return transacaoExistente;
     }

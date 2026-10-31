@@ -16,10 +16,7 @@ export class AuthService {
 
     const usuario = await this.prisma.usuario.findFirst({
       where: {
-        OR: [
-          { email: identificador },
-          { cpfCnpj: identificador },
-        ],
+        OR: [{ email: identificador }, { cpfCnpj: identificador }],
         status: 'ATIVO',
       },
       include: {
@@ -43,7 +40,7 @@ export class AuthService {
     const saldo = usuario.contas[0]?.conta?.saldo || 0;
 
     const payload = { sub: usuario.usuarioId, email: usuario.email, contaId };
-    
+
     return {
       access_token: this.jwtService.sign(payload),
       usuario: {

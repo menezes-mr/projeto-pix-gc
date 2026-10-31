@@ -1,4 +1,11 @@
-import { IsEnum, IsNotEmpty, IsString, IsUUID, ValidateIf, IsEmail } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsString,
+  IsUUID,
+  ValidateIf,
+  IsEmail,
+} from 'class-validator';
 
 export enum TipoChavePix {
   CPF = 'CPF',
@@ -8,7 +15,9 @@ export enum TipoChavePix {
 }
 
 export class CreateChavePixDto {
-  @IsEnum(TipoChavePix, { message: 'O tipo da chave deve ser CPF, CNPJ, EMAIL ou TELEFONE' })
+  @IsEnum(TipoChavePix, {
+    message: 'O tipo da chave deve ser CPF, CNPJ, EMAIL ou TELEFONE',
+  })
   @IsNotEmpty()
   tipoChave: TipoChavePix;
 

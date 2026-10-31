@@ -9,7 +9,11 @@ import { Prisma, type Conta } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateContaDto } from './dto/create-conta.dto';
 import { UpdateContaDto } from './dto/update-conta.dto';
-import { StatusUsuario, StatusConta, PapelUsuarioConta } from '../common/enums/status.enum';
+import {
+  StatusUsuario,
+  StatusConta,
+  PapelUsuarioConta,
+} from '../common/enums/status.enum';
 import { BloquearContaDto } from './dto/bloquear-conta.dto';
 
 @Injectable()
@@ -75,15 +79,24 @@ export class ContaService {
       }
 
       if (!contaExistente.usuarios.length) {
-        throw new ForbiddenException('Acesso negado: Você não é o titular desta conta.');
+        throw new ForbiddenException(
+          'Acesso negado: Você não é o titular desta conta.',
+        );
       }
 
-      throw new ForbiddenException('Apenas contas e usuários ativos podem consultar o saldo.');
+      throw new ForbiddenException(
+        'Apenas contas e usuários ativos podem consultar o saldo.',
+      );
     }
 
     const usuarioTitular = conta.usuarios[0]?.usuario;
-    if (!usuarioTitular || usuarioTitular.status !== String(StatusUsuario.ATIVO)) {
-      throw new ForbiddenException('Apenas contas e usuários ativos podem consultar o saldo.');
+    if (
+      !usuarioTitular ||
+      usuarioTitular.status !== String(StatusUsuario.ATIVO)
+    ) {
+      throw new ForbiddenException(
+        'Apenas contas e usuários ativos podem consultar o saldo.',
+      );
     }
 
     this.prisma.logAtividade
@@ -119,7 +132,9 @@ export class ContaService {
     }
 
     if (usuario.status !== String(StatusUsuario.ATIVO)) {
-      throw new ForbiddenException('Apenas usuários com cadastro ativo podem abrir contas bancárias.');
+      throw new ForbiddenException(
+        'Apenas usuários com cadastro ativo podem abrir contas bancárias.',
+      );
     }
 
     const agenciaGerada = '0001';
@@ -185,7 +200,9 @@ export class ContaService {
     const conta = await this.buscarContaPorId(contaId);
 
     if (conta.status !== String(StatusConta.ATIVA)) {
-      throw new ForbiddenException('Apenas contas ativas podem ter suas configurações alteradas.');
+      throw new ForbiddenException(
+        'Apenas contas ativas podem ter suas configurações alteradas.',
+      );
     }
 
     if (dto.usuarioId) {
@@ -201,15 +218,21 @@ export class ContaService {
       });
 
       if (!vinculoUsuario) {
-        throw new ForbiddenException('O usuário informado não é o titular desta conta.');
+        throw new ForbiddenException(
+          'O usuário informado não é o titular desta conta.',
+        );
       }
 
       if (vinculoUsuario.usuario.status === String(StatusUsuario.BLOQUEADO)) {
-        throw new ForbiddenException('O usuário titular está bloqueado no sistema por segurança.');
+        throw new ForbiddenException(
+          'O usuário titular está bloqueado no sistema por segurança.',
+        );
       }
 
       if (vinculoUsuario.usuario.status !== String(StatusUsuario.ATIVO)) {
-        throw new ForbiddenException('O usuário titular precisa estar ativo para realizar alterações.');
+        throw new ForbiddenException(
+          'O usuário titular precisa estar ativo para realizar alterações.',
+        );
       }
     }
 
@@ -217,7 +240,9 @@ export class ContaService {
       const contaAtualizada = await tx.conta.update({
         where: { contaId },
         data: {
-          ...(dto.limiteDiarioPix !== undefined && { limiteDiarioPix: dto.limiteDiarioPix }),
+          ...(dto.limiteDiarioPix !== undefined && {
+            limiteDiarioPix: dto.limiteDiarioPix,
+          }),
         },
       });
 
@@ -238,11 +263,15 @@ export class ContaService {
     const contaExistente = await this.buscarContaPorId(contaId);
 
     if (contaExistente.status === String(StatusConta.INATIVA)) {
-      throw new BadRequestException('Esta conta bancária já se encontra encerrada.');
+      throw new BadRequestException(
+        'Esta conta bancária já se encontra encerrada.',
+      );
     }
 
     if (Number(contaExistente.saldo) !== 0) {
-      throw new BadRequestException('A conta possui saldo remanescente e não pode ser encerrada.');
+      throw new BadRequestException(
+        'A conta possui saldo remanescente e não pode ser encerrada.',
+      );
     }
 
     const contaComUsuarios = await this.prisma.conta.findUnique({
@@ -307,7 +336,9 @@ export class ContaService {
     });
 
     if (!vinculo) {
-      throw new ForbiddenException('Você não tem permissão para acessar o extrato desta conta.');
+      throw new ForbiddenException(
+        'Você não tem permissão para acessar o extrato desta conta.',
+      );
     }
 
     const dataFiltro: { gte?: Date; lte?: Date } = {};
@@ -319,13 +350,17 @@ export class ContaService {
     }
 
     if (dataFiltro.gte && dataFiltro.lte && dataFiltro.lte < dataFiltro.gte) {
-      throw new BadRequestException('dataFim não pode ser anterior a dataInicio.');
+      throw new BadRequestException(
+        'dataFim não pode ser anterior a dataInicio.',
+      );
     }
 
     const skip = (page - 1) * limit;
     const where: Prisma.TransacaoPixWhereInput = {
       OR: [{ contaOrigemId: contaId }, { contaDestinoId: contaId }],
-      ...(Object.keys(dataFiltro).length > 0 ? { AND: [{ dataEfetivacao: dataFiltro }] } : {}),
+      ...(Object.keys(dataFiltro).length > 0
+        ? { AND: [{ dataEfetivacao: dataFiltro }] }
+        : {}),
     };
 
     const [transacoes, total] = await this.prisma.$transaction([
