@@ -43,6 +43,25 @@ export class UsuariosService {
         },
       });
 
+      const numeroConta = `${Math.floor(100000 + Math.random() * 900000)}-${Math.floor(Math.random() * 10)}`;
+      const conta = await tx.conta.create({
+        data: {
+          agencia: '0001',
+          numeroConta,
+          saldo: 1000.0,
+          limiteDiarioPix: 1000.0,
+          status: 'ATIVA',
+        },
+      });
+
+      await tx.usuarioConta.create({
+        data: {
+          usuarioId: usuario.usuarioId,
+          contaId: conta.contaId,
+          papel: 'TITULAR',
+        },
+      });
+
       await tx.logAtividade.create({
         data: {
           acao: 'CRIACAO DE USUARIO',

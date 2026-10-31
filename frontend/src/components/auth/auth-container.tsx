@@ -15,8 +15,14 @@ type AuthMode = "login" | "register";
 
 export function AuthContainer() {
   const router = useRouter();
-  const { login, register } = useAuth();
+  const { user, login, register } = useAuth();
   const [mode, setMode] = useState<AuthMode>("login");
+
+  React.useEffect(() => {
+    if (user) {
+      router.replace("/");
+    }
+  }, [user, router]);
   
   const [showPassword, setShowPassword] = useState(false);
   const [loginIdentifier, setLoginIdentifier] = useState("");

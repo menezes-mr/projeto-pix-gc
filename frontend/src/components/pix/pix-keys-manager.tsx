@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { IdCard, Mail, Trash2, Plus, Sparkles, Info, Loader2, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/auth-context";
 
 interface PixKey {
   chaveId: string;
@@ -13,6 +14,7 @@ interface PixKey {
 }
 
 export function PixKeysManager() {
+  const { user } = useAuth();
   const [keys, setKeys] = useState<PixKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingKey, setAddingKey] = useState(false);
@@ -62,6 +64,22 @@ export function PixKeysManager() {
     }
   };
 
+  const handleAddCpfKey = async () => {
+    if (!user?.document) return;
+    setAddingKey(true);
+    try {
+      await api.post('/pix/chaves', {
+        tipoChave: 'CPF',
+        valorChave: user.document.replace(/\D/g, ''),
+      });
+      await loadKeys();
+    } catch (error) {
+      console.error("Erro ao vincular CPF", error);
+    } finally {
+      setAddingKey(false);
+    }
+  };
+
   const getIcon = (type: string) => {
     if (type === 'CPF' || type === 'CNPJ') return <IdCard className="w-5 h-5" />;
     if (type === 'EMAIL') return <Mail className="w-5 h-5" />;
@@ -102,7 +120,11 @@ export function PixKeysManager() {
                   </span>
                 </div>
               </div>
-              <button className="text-red-500 hover:text-red-600 transition-colors p-2">
+              <button 
+                type="button" 
+                onClick={(e) => e.preventDefault()} 
+                className="text-gray-400 p-2 cursor-default"
+              >
                 <Trash2 className="w-5 h-5" />
               </button>
             </div>
@@ -110,13 +132,18 @@ export function PixKeysManager() {
         )}
       </div>
 
-
       <div className="flex flex-col gap-3">
-        <Button className="w-full bg-black hover:bg-gray-900 text-white gap-2 h-12">
-          <Plus className="w-5 h-5" />
-          Adicionar Chave (CPF/Email)
+        <Button 
+          type="button"
+          onClick={handleAddCpfKey}
+          disabled={addingKey || loading || !user?.document}
+          className="w-full bg-black hover:bg-gray-900 text-white gap-2 h-12"
+        >
+          {addingKey ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+          Vincular Chave CPF ({user?.document || "Cadastrado"})
         </Button>
         <Button 
+          type="button"
           onClick={handleAddRandomKey}
           disabled={addingKey || loading}
           className="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 gap-2 h-12 border-none"
