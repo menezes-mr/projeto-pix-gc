@@ -18,7 +18,7 @@ interface Recipient {
   documentoMascarado: string;
 }
 
-export function PixTransferFlow() {
+export function PixTransferFlow({ onCompleted }: { onCompleted?: () => void }) {
   const { refreshAccount } = useAuth();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [recipient, setRecipient] = useState<Recipient | null>(null);
@@ -46,6 +46,7 @@ export function PixTransferFlow() {
         valor: amount,
       });
       await refreshAccount();
+      onCompleted?.();
       setStep(4);
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {

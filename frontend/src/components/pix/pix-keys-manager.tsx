@@ -14,7 +14,7 @@ interface PixKey {
   dataCriacao: string;
 }
 
-export function PixKeysManager() {
+export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }) {
   const { user } = useAuth();
   const [keys, setKeys] = useState<PixKey[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,6 +66,7 @@ export function PixKeysManager() {
       await api.delete(`/pix/chaves/${chaveId}`);
       setFeedback({ type: "success", message: "Chave PIX removida com sucesso!" });
       await loadKeys();
+      onKeysChanged?.();
     } catch (error: unknown) {
       if (axios.isAxiosError<{ message?: string }>(error)) {
         setFeedback({
@@ -88,6 +89,7 @@ export function PixKeysManager() {
       await api.post('/pix/chaves/aleatoria', {});
       setFeedback({ type: "success", message: "Chave aleatória gerada com sucesso!" });
       await loadKeys();
+      onKeysChanged?.();
     } catch (error: unknown) {
       if (axios.isAxiosError<{ message?: string }>(error)) {
         setFeedback({
@@ -113,6 +115,7 @@ export function PixKeysManager() {
       });
       setFeedback({ type: "success", message: "Chave CPF vinculada com sucesso!" });
       await loadKeys();
+      onKeysChanged?.();
     } catch (error: unknown) {
       if (axios.isAxiosError<{ message?: string }>(error)) {
         setFeedback({
@@ -138,6 +141,7 @@ export function PixKeysManager() {
       });
       setFeedback({ type: "success", message: "Chave E-mail vinculada com sucesso!" });
       await loadKeys();
+      onKeysChanged?.();
     } catch (error: unknown) {
       if (axios.isAxiosError<{ message?: string }>(error)) {
         setFeedback({
