@@ -14,15 +14,25 @@ interface Recipient {
 
 interface StepValueProps {
   recipient: Recipient;
-  onNext: (amount: number) => void;
+  onNext: (amount: number, scheduledAt: string | null) => void;
   onBack: () => void;
+}
+
+function toLocalDateTimeValue(date: Date) {
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 16);
 }
 
 export function StepValue({ recipient, onNext, onBack }: StepValueProps) {
   const { user } = useAuth();
   const balance = user?.balance || 5000;
+  const dailyLimit = user?.dailyLimit ?? 1000;
   
   const [amountStr, setAmountStr] = useState("");
+  const [scheduleMode, setScheduleMode] = useState<"now" | "scheduled">("now");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [minimumScheduleLocal, setMinimumScheduleLocal] = useState("");
+  const [scheduleDateValid, setScheduleDateValid] = useState(false);
   
   const formattedBalance = balance.toLocaleString("pt-BR", {
     style: "currency",
@@ -30,8 +40,18 @@ export function StepValue({ recipient, onNext, onBack }: StepValueProps) {
   });
 
   const rawAmount = parseFloat(amountStr.replace(/\./g, "").replace(",", ".")) || 0;
-  const isInsufficient = rawAmount > balance;
-  const isValid = rawAmount > 0 && !isInsufficient;
+  const isInsufficient = scheduleMode === "now" && rawAmount > balance;
+  const isOverLimit = rawAmount > dailyLimit;
+  const isScheduleInvalid = scheduleMode === "scheduled" && (!scheduledAt || !scheduleDateValid);
+  const isValid = rawAmount > 0 && !isInsufficient && !isOverLimit && !isScheduleInvalid;
+
+  const openSchedulePicker = () => {
+    const tomorrow = new Date();
+    tomorrow.setHours(0, 0, 0, 0);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    setMinimumScheduleLocal(toLocalDateTimeValue(tomorrow));
+    setScheduleMode("scheduled");
+  };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, "");
@@ -56,7 +76,7 @@ export function StepValue({ recipient, onNext, onBack }: StepValueProps) {
             SALDO EM CONTA <Eye className="w-4 h-4" />
           </div>
           <div className="bg-white/10 px-3 py-1 rounded-full text-xs font-medium">
-            Limite Diário: R$ 1.000,00
+            Limite Diário: {dailyLimit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
           </div>
         </div>
         <div className="text-3xl font-bold">
@@ -101,6 +121,12 @@ export function StepValue({ recipient, onNext, onBack }: StepValueProps) {
               <span>Saldo insuficiente para esta transação.</span>
             </div>
           )}
+          {isOverLimit && (
+            <div className="flex items-center gap-1.5 mt-3 text-red-600 text-sm font-medium">
+              <AlertCircle className="w-4 h-4" />
+              <span>O valor ultrapassa seu limite diário de Pix.</span>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 mt-2">
@@ -116,23 +142,65 @@ export function StepValue({ recipient, onNext, onBack }: StepValueProps) {
         </div>
       </div>
 
-      <div className="border border-gray-200 bg-gray-50/50 rounded-xl p-4 flex items-center justify-between">
+      <div className="border border-gray-200 bg-gray-50/50 rounded-xl p-4 flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-white border border-gray-200 rounded-lg text-gray-500">
             <Calendar className="w-5 h-5" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-gray-500">Data de Envio</span>
-            <span className="text-sm font-semibold text-gray-900">Hoje (Transferência imediata)</span>
+            <span className="text-xs text-gray-500">Quando enviar</span>
+            <span className="text-sm font-semibold text-gray-900">
+              {scheduleMode === "now" ? "Agora (transferência imediata)" : "Agendamento"}
+            </span>
           </div>
         </div>
-        <button className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
-          Agendar
-        </button>
+        <div className="grid grid-cols-2 rounded-lg border border-gray-200 bg-white p-1">
+          <button
+            type="button"
+            onClick={() => setScheduleMode("now")}
+            aria-pressed={scheduleMode === "now"}
+            className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${scheduleMode === "now" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"}`}
+          >
+            Agora
+          </button>
+          <button
+            type="button"
+            onClick={openSchedulePicker}
+            aria-pressed={scheduleMode === "scheduled"}
+            className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${scheduleMode === "scheduled" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"}`}
+          >
+            Agendar
+          </button>
+        </div>
+        {scheduleMode === "scheduled" && (
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-gray-700">
+            Data e hora (a partir de amanhã)
+            <input
+              type="datetime-local"
+              value={scheduledAt}
+              min={minimumScheduleLocal}
+              onChange={(event) => {
+                const value = event.target.value;
+                setScheduledAt(value);
+                setScheduleDateValid(
+                  Boolean(value) && new Date(value).getTime() >= new Date(minimumScheduleLocal).getTime(),
+                );
+              }}
+              className="h-11 rounded-md border border-gray-300 bg-white px-3 text-gray-900 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+              required
+            />
+            {scheduledAt && !scheduleDateValid && (
+              <span className="text-xs font-medium text-red-600">Escolha uma data a partir de amanhã.</span>
+            )}
+            <span className="text-xs font-normal text-gray-500">
+              O saldo será debitado quando o Pix for processado.
+            </span>
+          </label>
+        )}
       </div>
 
       <Button 
-        onClick={() => onNext(rawAmount)}
+        onClick={() => onNext(rawAmount, scheduleMode === "scheduled" ? scheduledAt : null)}
         disabled={!isValid}
         className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-12 text-lg gap-2 mt-4 disabled:bg-gray-200 disabled:text-gray-400"
       >
