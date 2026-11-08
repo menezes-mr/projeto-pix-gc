@@ -61,6 +61,7 @@ describe('PixTransferenciaService com HistoricoPixService', () => {
     dataEfetivacao: new Date('2026-09-22T12:00:00.000Z'),
     transacaoExternaId: null,
     transacaoEstornoId: null,
+    motivoEstorno: null,
   };
 
   let modulo: TestingModule;

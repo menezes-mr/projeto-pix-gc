@@ -89,6 +89,7 @@ model TransacaoPix {
 
   transacaoExternaId String?   @unique  
   transacaoEstornoId String?   @unique
+  motivoEstorno      String?
   contaOrigemId      String?             
   contaDestinoId     String?
   usuarioSolicitanteId String?
