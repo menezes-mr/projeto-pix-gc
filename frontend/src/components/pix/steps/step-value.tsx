@@ -25,7 +25,7 @@ function toLocalDateTimeValue(date: Date) {
 
 export function StepValue({ recipient, onNext, onBack }: StepValueProps) {
   const { user } = useAuth();
-  const balance = user?.balance || 5000;
+  const balance = user?.balance ?? 0;
   const dailyLimit = user?.dailyLimit ?? 1000;
   
   const [amountStr, setAmountStr] = useState("");
