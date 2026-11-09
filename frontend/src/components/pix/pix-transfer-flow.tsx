@@ -6,6 +6,7 @@ import { StepKey } from "./steps/step-key";
 import { StepValue } from "./steps/step-value";
 import { StepConfirm } from "./steps/step-confirm";
 import { Button } from "@/components/ui/button";
+import { PixReceipt, type PixTransaction } from "@/components/pix/pix-receipt";
 
 import axios from "axios";
 import { api } from "@/lib/api";
@@ -19,20 +20,23 @@ interface Recipient {
 }
 
 export function PixTransferFlow() {
-  const { refreshAccount } = useAuth();
+  const { refreshAccount, user } = useAuth();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [recipient, setRecipient] = useState<Recipient | null>(null);
   const [amount, setAmount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [scheduledAt, setScheduledAt] = useState<string | null>(null);
+  const [transaction, setTransaction] = useState<PixTransaction | null>(null);
 
   const handleNextKey = (rec: Recipient) => {
     setRecipient(rec);
     setStep(2);
   };
 
-  const handleNextValue = (val: number) => {
+  const handleNextValue = (val: number, date: string | null) => {
     setAmount(val);
+    setScheduledAt(date);
     setStep(3);
   };
 
@@ -41,10 +45,12 @@ export function PixTransferFlow() {
     setLoading(true);
     setError("");
     try {
-      await api.post('/pix/transferencia', {
+      const response = await api.post<PixTransaction>('/pix/transferencia', {
         chavePixDestino: recipient.chavePix,
         valor: amount,
+        ...(scheduledAt ? { dataAgendamento: new Date(scheduledAt).toISOString() } : {}),
       });
+      setTransaction(response.data);
       await refreshAccount();
       setStep(4);
     } catch (err: unknown) {
@@ -62,12 +68,14 @@ export function PixTransferFlow() {
     setStep(1);
     setRecipient(null);
     setAmount(0);
+    setScheduledAt(null);
+    setTransaction(null);
   };
 
   const stepTitles = {
     1: "Passo 1 de 3: Identificar Destinatário",
     2: "Passo 2 de 3: Inserir Valor e Data",
-    3: "Passo 3 de 3: Revisão e Senha",
+    3: "Passo 3 de 3: Revisão do Pix",
     4: "Transferência Realizada",
   };
 
@@ -85,11 +93,30 @@ export function PixTransferFlow() {
           <CheckCircle2 className="w-8 h-8" />
         </div>
         <div className="flex flex-col items-center gap-2">
-          <h2 className="text-2xl font-bold text-gray-900">Transferência Concluída!</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {scheduledAt ? "Pix agendado" : "Transferência concluída"}
+          </h2>
           <p className="text-gray-500 text-center">
-            Sua transferência de <strong>{amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong> para <strong>{recipient?.nomeCompleto}</strong> foi enviada com sucesso.
+            {scheduledAt ? "O comprovante do agendamento está disponível abaixo." : "O comprovante da transferência está disponível abaixo."}
           </p>
         </div>
+        {transaction && (
+          <PixReceipt
+            transaction={transaction}
+            accountId={user?.contaId}
+            authenticatedUserName={user?.name}
+            recipientName={recipient?.nomeCompleto}
+            originAccount={
+              user?.contaId
+                ? {
+                    contaId: user.contaId,
+                    agencia: user.agency,
+                    numeroConta: user.accountNumber,
+                  }
+                : undefined
+            }
+          />
+        )}
         <Button onClick={resetFlow} className="mt-4 bg-gray-900 hover:bg-black text-white w-full max-w-xs">
           Nova Transferência
         </Button>
@@ -125,7 +152,7 @@ export function PixTransferFlow() {
       <div className="flex-1">
         {step === 1 && <StepKey onNext={handleNextKey} />}
         {step === 2 && recipient && <StepValue recipient={recipient} onNext={handleNextValue} onBack={() => setStep(1)} />}
-        {step === 3 && recipient && <StepConfirm recipient={recipient} amount={amount} onNext={handleConfirm} loading={loading} error={error} onBack={() => setStep(2)} />}
+        {step === 3 && recipient && <StepConfirm recipient={recipient} amount={amount} scheduledAt={scheduledAt} onNext={handleConfirm} loading={loading} error={error} onBack={() => setStep(2)} />}
       </div>
     </div>
   );
