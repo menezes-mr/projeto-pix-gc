@@ -24,3 +24,22 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .pix-receipt,
+  .pix-receipt * {
+    visibility: visible !important;
+  }
+
+  .pix-receipt {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+}
