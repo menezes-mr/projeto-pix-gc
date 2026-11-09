@@ -228,4 +228,29 @@ export class UsuariosService {
 
     return usuario;
   }
+
+  async listarLogs(usuarioId: string, page: number, limit: number) {
+    const paginaAtual = Math.max(1, page);
+    const itensPorPagina = Math.min(Math.max(1, limit), 100);
+
+    const [dados, total] = await Promise.all([
+      this.prisma.logAtividade.findMany({
+        where: { usuarioId },
+        orderBy: { dataHora: 'desc' },
+        skip: (paginaAtual - 1) * itensPorPagina,
+        take: itensPorPagina,
+      }),
+      this.prisma.logAtividade.count({ where: { usuarioId } }),
+    ]);
+
+    return {
+      dados,
+      meta: {
+        total,
+        pagina: paginaAtual,
+        limite: itensPorPagina,
+        totalPaginas: Math.ceil(total / itensPorPagina),
+      },
+    };
+  }
 }
