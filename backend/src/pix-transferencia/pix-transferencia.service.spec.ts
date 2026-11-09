@@ -196,4 +196,21 @@ describe('PixTransferenciaService com HistoricoPixService', () => {
     expect(tx.logAtividade.create).not.toHaveBeenCalled();
     expect(emitirEvento).not.toHaveBeenCalled();
   });
+
+  it('rejeita transferência para chave PIX suspensa sem movimentar saldo nem emitir evento', async () => {
+    tx.chavePix.findUnique.mockResolvedValueOnce({
+      contaId: 'conta-destino',
+      status: 'SUSPENSA',
+      conta: { status: 'ATIVA' },
+    });
+
+    await expect(service.transferir(contexto, dto)).rejects.toThrow(
+      'A chave PIX de destino está suspensa',
+    );
+
+    expect(tx.conta.update).not.toHaveBeenCalled();
+    expect(registrarTransacao).not.toHaveBeenCalled();
+    expect(tx.logAtividade.create).not.toHaveBeenCalled();
+    expect(emitirEvento).not.toHaveBeenCalled();
+  });
 });

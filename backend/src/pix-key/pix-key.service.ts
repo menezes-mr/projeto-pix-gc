@@ -15,7 +15,7 @@ export class PixKeyService {
 
   async listarChavesDaConta(contaId: string) {
     return this.prisma.chavePix.findMany({
-      where: { contaId, status: 'ATIVA' },
+      where: { contaId, status: { in: ['ATIVA', 'SUSPENSA'] } },
       orderBy: { dataCriacao: 'desc' },
     });
   }
@@ -197,6 +197,87 @@ export class PixKeyService {
 
     return {
       mensagem: 'Chave PIX inativada com sucesso.',
+      chave: chaveAtualizada,
+    };
+  }
+
+  private async buscarChaveDaConta(id: string, contaId: string) {
+    let chave = await this.prisma.chavePix.findUnique({
+      where: { chaveId: id },
+    });
+    if (!chave) {
+      chave = await this.prisma.chavePix.findUnique({
+        where: { valorChave: id },
+      });
+    }
+
+    if (!chave || chave.contaId !== contaId) {
+      throw new NotFoundException('Chave PIX não encontrada para esta conta.');
+    }
+
+    return chave;
+  }
+
+  async suspenderChave(chaveId: string, contaId: string, usuarioId: string) {
+    await this.validarContaUsuario(contaId, usuarioId);
+    const chave = await this.buscarChaveDaConta(chaveId, contaId);
+
+    if (chave.status === 'SUSPENSA') {
+      throw new BadRequestException('Chave PIX já se encontra suspensa.');
+    }
+    if (chave.status !== 'ATIVA') {
+      throw new BadRequestException(
+        'Apenas chaves ativas podem ser suspensas.',
+      );
+    }
+
+    const [chaveAtualizada] = await this.prisma.$transaction([
+      this.prisma.chavePix.update({
+        where: { chaveId: chave.chaveId },
+        data: { status: 'SUSPENSA' },
+      }),
+      this.prisma.logAtividade.create({
+        data: { acao: 'SUSPENSAO_CHAVE_PIX', usuarioId },
+      }),
+    ]);
+
+    return {
+      mensagem: 'Chave PIX suspensa com sucesso.',
+      chave: chaveAtualizada,
+    };
+  }
+
+  async desbloquearChave(chaveId: string, contaId: string, usuarioId: string) {
+    await this.validarContaUsuario(contaId, usuarioId);
+    const chave = await this.buscarChaveDaConta(chaveId, contaId);
+
+    if (chave.status !== 'SUSPENSA') {
+      throw new BadRequestException(
+        'Apenas chaves suspensas podem ser desbloqueadas.',
+      );
+    }
+
+    const totalAtivas = await this.prisma.chavePix.count({
+      where: { contaId, status: 'ATIVA' },
+    });
+    if (totalAtivas >= 5) {
+      throw new BadRequestException(
+        'Limite máximo de 5 chaves PIX ativas por conta atingido.',
+      );
+    }
+
+    const [chaveAtualizada] = await this.prisma.$transaction([
+      this.prisma.chavePix.update({
+        where: { chaveId: chave.chaveId },
+        data: { status: 'ATIVA' },
+      }),
+      this.prisma.logAtividade.create({
+        data: { acao: 'DESBLOQUEIO_CHAVE_PIX', usuarioId },
+      }),
+    ]);
+
+    return {
+      mensagem: 'Chave PIX desbloqueada com sucesso.',
       chave: chaveAtualizada,
     };
   }
