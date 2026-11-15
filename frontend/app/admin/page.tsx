@@ -85,8 +85,12 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState("");
   const [activeTab, setActiveTab] = useState<"relatorios" | "antifraude">("relatorios");
 
-  const [dataInicio, setDataInicio] = useState("2026-10-01");
-  const [dataFim, setDataFim] = useState("2026-10-31");
+  const [dataInicio, setDataInicio] = useState(
+    () => `${new Date().getFullYear()}-01-01`,
+  );
+  const [dataFim, setDataFim] = useState(
+    () => `${new Date().getFullYear()}-12-31`,
+  );
   const [relatorio, setRelatorio] = useState<RelatorioData | null>(null);
   const [loadingRelatorio, setLoadingRelatorio] = useState(false);
 
@@ -275,10 +279,21 @@ export default function AdminPage() {
     return nome.includes(termo) || cpf.includes(termo) || numero.includes(termo);
   });
 
-  const totalTransacoesGeral = relatorio?.detalhamento.reduce((acc, curr) => acc + curr.quantidade, 0) || 0;
-  const transacoesEfetivadas = relatorio?.detalhamento.find((d) => d.status === "EFETIVADA")?.quantidade || 0;
-  const transacoesPendentes = relatorio?.detalhamento.find((d) => d.status === "PENDENTE")?.quantidade || 0;
-  const ticketMedio = transacoesEfetivadas > 0 ? (relatorio?.volumeTotalEfetivado || 0) / transacoesEfetivadas : 0;
+  const totalTransacoesGeral =
+    relatorio?.detalhamento.reduce((acc, curr) => acc + curr.quantidade, 0) ||
+    0;
+  const transacoesEfetivadas =
+    relatorio?.detalhamento
+      .filter((d) => d.status === "EFETIVADA")
+      .reduce((acc, curr) => acc + curr.quantidade, 0) || 0;
+  const transacoesPendentes =
+    relatorio?.detalhamento
+      .filter((d) => d.status === "PENDENTE")
+      .reduce((acc, curr) => acc + curr.quantidade, 0) || 0;
+  const ticketMedio =
+    transacoesEfetivadas > 0
+      ? (relatorio?.volumeTotalEfetivado || 0) / transacoesEfetivadas
+      : 0;
 
   const handleExportarRelatorioGlobalCsv = () => {
     if (!relatorio) return;
@@ -557,7 +572,10 @@ export default function AdminPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={carregarRelatorio}
+                  onClick={() => {
+                    void carregarRelatorio();
+                    void carregarContas();
+                  }}
                   disabled={loadingRelatorio}
                   className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
                 >

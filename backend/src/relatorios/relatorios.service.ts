@@ -9,6 +9,10 @@ export class RelatoriosService {
     const inicio = new Date(dataInicio);
     const fim = new Date(dataFim);
 
+    if (!dataFim.includes('T')) {
+      fim.setUTCHours(23, 59, 59, 999);
+    }
+
     if (fim < inicio) {
       throw new BadRequestException(
         'dataFim não pode ser anterior a dataInicio',
