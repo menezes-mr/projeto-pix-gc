@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   InternalServerErrorException,
 } from '@nestjs/common';
@@ -9,6 +10,7 @@ import { Prisma, type Conta } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateContaDto } from './dto/create-conta.dto';
 import { UpdateContaDto } from './dto/update-conta.dto';
+import { AdicionarCotitularDto } from './dto/adicionar-cotitular.dto';
 import {
   StatusUsuario,
   StatusConta,
@@ -534,5 +536,201 @@ export class ContaService {
         conta: contaDesbloqueada,
       };
     });
+  }
+
+  async listarCotitulares(contaId: string) {
+    await this.buscarContaPorId(contaId);
+
+    return await this.prisma.usuarioConta.findMany({
+      where: { contaId },
+      include: {
+        usuario: {
+          select: {
+            usuarioId: true,
+            nomeCompleto: true,
+            email: true,
+            cpfCnpj: true,
+            telefone: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: {
+        papel: 'desc',
+      },
+    });
+  }
+
+  async adicionarCotitular(
+    contaId: string,
+    idUsuarioLogado: string,
+    dto: AdicionarCotitularDto,
+  ) {
+    await this.buscarContaPorId(contaId);
+
+    const vinculoSolicitante = await this.prisma.usuarioConta.findFirst({
+      where: {
+        contaId,
+        usuarioId: idUsuarioLogado,
+        papel: PapelUsuarioConta.TITULAR,
+      },
+    });
+
+    if (!vinculoSolicitante) {
+      throw new ForbiddenException(
+        'Apenas titulares da conta podem adicionar cotitulares.',
+      );
+    }
+
+    const identificadorLimpo = dto.identificador.trim();
+    const apenasDigitos = identificadorLimpo.replace(/\D/g, '');
+    const candidatosCpf =
+      apenasDigitos && apenasDigitos !== identificadorLimpo
+        ? [identificadorLimpo, apenasDigitos]
+        : [identificadorLimpo];
+
+    const usuarioCotitular = await this.prisma.usuario.findFirst({
+      where: {
+        OR: [{ email: identificadorLimpo }, { cpfCnpj: { in: candidatosCpf } }],
+      },
+    });
+
+    if (!usuarioCotitular) {
+      throw new NotFoundException(
+        'Usuário não encontrado para o CPF/CNPJ ou e-mail informado.',
+      );
+    }
+
+    if (usuarioCotitular.status !== String(StatusUsuario.ATIVO)) {
+      throw new BadRequestException(
+        'Apenas usuários com cadastro ativo podem ser adicionados como cotitulares.',
+      );
+    }
+
+    const vinculoExistente = await this.prisma.usuarioConta.findFirst({
+      where: {
+        contaId,
+        usuarioId: usuarioCotitular.usuarioId,
+      },
+    });
+
+    if (vinculoExistente) {
+      throw new ConflictException(
+        'Este usuário já está vinculado a esta conta.',
+      );
+    }
+
+    const novoVinculo = await this.prisma.usuarioConta.create({
+      data: {
+        contaId,
+        usuarioId: usuarioCotitular.usuarioId,
+        papel: dto.papel,
+      },
+      include: {
+        usuario: {
+          select: {
+            usuarioId: true,
+            nomeCompleto: true,
+            email: true,
+            cpfCnpj: true,
+            telefone: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (this.prisma.logAtividade?.create) {
+      await this.prisma.logAtividade
+        .create({
+          data: {
+            usuarioId: idUsuarioLogado,
+            acao: `ADICAO_COTITULAR: ${usuarioCotitular.nomeCompleto} (${dto.papel})`,
+          },
+        })
+        .catch(() => undefined);
+    }
+
+    return novoVinculo;
+  }
+
+  async removerCotitular(
+    contaId: string,
+    idUsuarioLogado: string,
+    idUsuarioRemover: string,
+  ) {
+    await this.buscarContaPorId(contaId);
+
+    const vinculoSolicitante = await this.prisma.usuarioConta.findFirst({
+      where: {
+        contaId,
+        usuarioId: idUsuarioLogado,
+        papel: PapelUsuarioConta.TITULAR,
+      },
+    });
+
+    if (!vinculoSolicitante) {
+      throw new ForbiddenException(
+        'Apenas titulares da conta podem remover cotitulares.',
+      );
+    }
+
+    const vinculoRemover = await this.prisma.usuarioConta.findFirst({
+      where: {
+        contaId,
+        usuarioId: idUsuarioRemover,
+      },
+      include: {
+        usuario: true,
+      },
+    });
+
+    if (!vinculoRemover) {
+      throw new NotFoundException(
+        'O usuário informado não está vinculado a esta conta.',
+      );
+    }
+
+    if (vinculoRemover.papel === String(PapelUsuarioConta.TITULAR)) {
+      const titularesAtivos = await this.prisma.usuarioConta.count({
+        where: {
+          contaId,
+          papel: PapelUsuarioConta.TITULAR,
+          usuario: {
+            status: StatusUsuario.ATIVO,
+          },
+        },
+      });
+
+      if (titularesAtivos <= 1) {
+        throw new BadRequestException(
+          'Não é possível remover o único titular ativo da conta.',
+        );
+      }
+    }
+
+    await this.prisma.usuarioConta.delete({
+      where: {
+        usuarioId_contaId: {
+          usuarioId: idUsuarioRemover,
+          contaId,
+        },
+      },
+    });
+
+    if (this.prisma.logAtividade?.create) {
+      await this.prisma.logAtividade
+        .create({
+          data: {
+            usuarioId: idUsuarioLogado,
+            acao: `REMOCAO_COTITULAR: ${vinculoRemover.usuario?.nomeCompleto ?? idUsuarioRemover}`,
+          },
+        })
+        .catch(() => undefined);
+    }
+
+    return {
+      mensagem: 'Cotitular desvinculado da conta com sucesso.',
+    };
   }
 }
