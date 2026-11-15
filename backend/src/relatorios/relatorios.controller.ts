@@ -30,4 +30,16 @@ export class RelatoriosController {
       query.dataFim,
     );
   }
+
+  @Get('contas')
+  @UseGuards(JwtAuthGuard, AdminRoleGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Listar contas bancárias para monitoramento antifraude (Requer ADMIN)',
+  })
+  async listarContas() {
+    return this.relatoriosService.listarTodasContas();
+  }
 }

@@ -61,7 +61,13 @@ export class PixAgendadoService {
         },
       });
       const vinculo = transacao.contaOrigem?.usuarios[0];
-      if (vinculo?.papel !== String(PapelUsuarioConta.TITULAR)) {
+      if (
+        !vinculo ||
+        ![
+          String(PapelUsuarioConta.TITULAR),
+          String(PapelUsuarioConta.OPERADOR),
+        ].includes(vinculo.papel)
+      ) {
         throw new ForbiddenException(
           'O usuário não é titular da conta de origem',
         );
@@ -210,7 +216,13 @@ export class PixAgendadoService {
     const solicitante = origem.usuarios.find(
       (vinculo) => vinculo.usuarioId === usuarioSolicitanteId,
     );
-    if (solicitante?.papel !== PapelUsuarioConta.TITULAR) {
+    if (
+      !solicitante ||
+      ![
+        String(PapelUsuarioConta.TITULAR),
+        String(PapelUsuarioConta.OPERADOR),
+      ].includes(solicitante.papel)
+    ) {
       throw new RegraNegocioPixError(
         'Solicitante não é mais titular da origem',
       );

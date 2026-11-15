@@ -13,7 +13,23 @@ import { PrismaService } from '../prisma/prisma.service';
 export class PixKeyService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listarChavesDaConta(contaId: string) {
+  async listarChavesDaConta(contaId: string, usuarioId?: string) {
+    if (usuarioId && this.prisma.conta?.findUnique) {
+      const conta = await this.prisma.conta.findUnique({
+        where: { contaId },
+        include: {
+          usuarios: {
+            where: { usuarioId },
+          },
+        },
+      });
+      if (conta && conta.usuarios.length === 0) {
+        throw new ForbiddenException(
+          'Você não possui acesso às chaves PIX desta conta.',
+        );
+      }
+    }
+
     return this.prisma.chavePix.findMany({
       where: { contaId, status: { in: ['ATIVA', 'SUSPENSA'] } },
       orderBy: { dataCriacao: 'desc' },
@@ -39,13 +55,22 @@ export class PixKeyService {
         'Esta conta não pertence ao usuário informado',
       );
 
+    if (
+      vinculo.papel &&
+      !['TITULAR', 'OPERADOR'].includes(String(vinculo.papel))
+    ) {
+      throw new ForbiddenException(
+        'Apenas titulares e operadores podem gerenciar chaves PIX desta conta',
+      );
+    }
+
     if (conta.status !== 'ATIVA' || vinculo.usuario.status !== 'ATIVO') {
       throw new BadRequestException(
         'A conta e o usuário precisam estar ativos',
       );
     }
 
-    return { conta, usuario: vinculo.usuario };
+    return { conta, usuario: vinculo.usuario, papel: vinculo.papel };
   }
 
   private mascararDocumento(doc: string) {
@@ -296,17 +321,24 @@ export class PixKeyService {
       },
     });
 
+    const vinculoResponsavel =
+      chave?.conta.usuarios.find(
+        (u) => u.papel === 'TITULAR' && u.usuario.status === 'ATIVO',
+      ) ??
+      chave?.conta.usuarios.find((u) => u.usuario.status === 'ATIVO') ??
+      chave?.conta.usuarios[0];
+
     if (
       !chave ||
       chave.status !== 'ATIVA' ||
       chave.conta.status !== 'ATIVA' ||
-      !chave.conta.usuarios[0] ||
-      chave.conta.usuarios[0].usuario.status !== 'ATIVO'
+      !vinculoResponsavel ||
+      vinculoResponsavel.usuario.status !== 'ATIVO'
     ) {
       throw new NotFoundException('Chave PIX inválida ou inexistente');
     }
 
-    const usuario = chave.conta.usuarios[0].usuario;
+    const usuario = vinculoResponsavel.usuario;
 
     return {
       chavePix: chave.valorChave,

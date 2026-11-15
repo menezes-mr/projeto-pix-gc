@@ -145,9 +145,9 @@ export class PixTransferenciaService {
 
       const vinculo = contaOrigem.usuarios[0];
 
-      if (!vinculo || vinculo.papel !== 'TITULAR') {
+      if (!vinculo || !['TITULAR', 'OPERADOR'].includes(vinculo.papel)) {
         throw new ForbiddenException(
-          'O usuário não é titular da conta de origem',
+          'O usuário não possui permissão de titular ou operador na conta de origem',
         );
       }
 
@@ -189,10 +189,7 @@ export class PixTransferenciaService {
         throw new NotFoundException('Chave PIX de destino inválida');
       }
 
-      if (
-        chaveDestino.contaId === contaOrigemId ||
-        chaveDestino.conta.usuarios?.some((u) => u.usuarioId === usuarioId)
-      ) {
+      if (chaveDestino.contaId === contaOrigemId) {
         throw new BadRequestException(
           'Não é possível transferir para você mesmo ou para a sua própria conta',
         );

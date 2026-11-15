@@ -87,6 +87,22 @@ export function PixTransferFlow({ onCompleted }: { onCompleted?: () => void }) {
     4: "100%",
   };
 
+  if (user?.role === "DEPENDENTE") {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 flex flex-col items-center justify-center text-center gap-3 min-h-[280px]">
+        <h3 className="text-lg font-bold text-gray-900">
+          Modo de Consulta Supervisionada (DEPENDENTE)
+        </h3>
+        <p className="text-sm text-gray-500 max-w-md">
+          Na conta <strong>C/C {user.accountNumber}</strong>, seu papel é{" "}
+          <strong>DEPENDENTE</strong>. Você pode consultar o saldo, o extrato e
+          as chaves PIX da conta ao lado, mas o envio de transferências é
+          restrito a Titulares e Operadores.
+        </p>
+      </div>
+    );
+  }
+
   if (step === 4) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 flex flex-col items-center justify-center gap-6">

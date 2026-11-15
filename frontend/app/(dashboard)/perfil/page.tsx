@@ -5,6 +5,7 @@ import { LimitsCard } from "@/components/profile/limits-card";
 import { SecuritySettings } from "@/components/profile/security-settings";
 import { DangerZone } from "@/components/profile/danger-zone";
 import { ActivityLog } from "@/components/profile/activity-log";
+import { CoHoldersCard } from "@/components/profile/co-holders-card";
 
 export default function ProfilePage() {
   return (
@@ -15,6 +16,7 @@ export default function ProfilePage() {
         <div className="flex flex-col gap-6">
           <PersonalDataForm />
           <LimitsCard />
+          <CoHoldersCard />
         </div>
 
         <div className="flex flex-col gap-6">

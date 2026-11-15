@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Lock,
   Unlock,
+  Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
@@ -30,11 +31,17 @@ interface PixKey {
 
 export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }) {
   const { user } = useAuth();
+  const contaId = user?.contaId;
+  const userRole = user?.role || "TITULAR";
+  const isTitular = userRole === "TITULAR";
+  const canManageKeys = userRole === "TITULAR" || userRole === "OPERADOR";
+
   const [keys, setKeys] = useState<PixKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingKey, setAddingKey] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
     type: "idle" | "success" | "error";
     message: string;
@@ -44,23 +51,34 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
   });
 
   const loadKeys = useCallback(async () => {
+    if (!contaId) {
+      setKeys([]);
+      setLoading(false);
+      return;
+    }
     try {
-      const response = await api.get("/pix/chaves/minhas");
+      const response = await api.get("/pix/chaves/minhas", {
+        params: { contaId },
+      });
       setKeys(response.data as PixKey[]);
     } catch (error) {
       console.error("Erro ao buscar chaves", error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [contaId]);
 
   useEffect(() => {
+    if (!contaId) return;
     let active = true;
     api
-      .get("/pix/chaves/minhas")
+      .get("/pix/chaves/minhas", {
+        params: { contaId },
+      })
       .then((response) => {
         if (active) {
           setKeys(response.data as PixKey[]);
+          setFeedback({ type: "idle", message: "" });
         }
       })
       .catch((error) => {
@@ -74,16 +92,28 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
     return () => {
       active = false;
     };
-  }, []);
+  }, [contaId]);
 
   const activeCount = keys.filter((k) => k.status === "ATIVA").length;
   const isLimitReached = activeCount >= 5;
+
+  const handleCopyKey = async (chaveId: string, valorChave: string) => {
+    try {
+      await navigator.clipboard.writeText(valorChave);
+      setCopiedId(chaveId);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      // ignore clipboard error
+    }
+  };
 
   const handleDeleteKey = async (chaveId: string) => {
     setDeletingId(chaveId);
     setFeedback({ type: "idle", message: "" });
     try {
-      await api.delete(`/pix/chaves/${chaveId}`);
+      await api.delete(`/pix/chaves/${chaveId}`, {
+        params: { contaId },
+      });
       setFeedback({
         type: "success",
         message: "Chave PIX removida com sucesso!",
@@ -116,7 +146,9 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
         ? "Erro ao suspender chave PIX."
         : "Erro ao desbloquear chave PIX.";
     try {
-      await api.patch(`/pix/chaves/${chaveId}/${action}`);
+      await api.patch(`/pix/chaves/${chaveId}/${action}`, {}, {
+        params: { contaId },
+      });
       setFeedback({
         type: "success",
         message:
@@ -145,7 +177,9 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
     setAddingKey(true);
     setFeedback({ type: "idle", message: "" });
     try {
-      await api.post("/pix/chaves/aleatoria", {});
+      await api.post("/pix/chaves/aleatoria", {}, {
+        params: { contaId },
+      });
       setFeedback({
         type: "success",
         message: "Chave aleatória gerada com sucesso!",
@@ -177,6 +211,7 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
       await api.post("/pix/chaves", {
         tipoChave: "CPF",
         valorChave: user.document.replace(/\D/g, ""),
+        contaId,
       });
       setFeedback({
         type: "success",
@@ -206,6 +241,7 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
       await api.post("/pix/chaves", {
         tipoChave: "EMAIL",
         valorChave: user.email.trim().toLowerCase(),
+        contaId,
       });
       setFeedback({
         type: "success",
@@ -240,10 +276,20 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h3 className="text-xl font-bold text-gray-900">Minhas Chaves</h3>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h3 className="text-xl font-bold text-gray-900">
+            {isTitular ? "Minhas Chaves" : "Chaves da Conta"}
+          </h3>
+          {user?.accountNumber && (
+            <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+              C/C {user.accountNumber} ({userRole})
+            </span>
+          )}
+        </div>
         <p className="text-sm text-gray-500">
-          Gerencie suas chaves PIX cadastradas para receber transferências em
-          tempo real.
+          {isTitular
+            ? "Gerencie suas chaves PIX cadastradas para receber transferências em tempo real."
+            : "Visualize e gerencie as chaves PIX vinculadas a esta conta compartilhada."}
         </p>
       </div>
 
@@ -279,7 +325,7 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
         ) : keys.length === 0 ? (
           <div className="flex flex-col items-center justify-center flex-1 text-gray-400 gap-2">
             <Key className="w-8 h-8" />
-            <span className="text-sm">Nenhuma chave cadastrada</span>
+            <span className="text-sm">Nenhuma chave cadastrada nesta conta</span>
           </div>
         ) : (
           keys.map((k) => {
@@ -287,17 +333,17 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
             return (
               <div
                 key={k.chaveId}
-                className={`border rounded-xl p-4 flex items-center justify-between ${
+                className={`border rounded-xl p-4 flex items-center justify-between gap-2 ${
                   suspended
                     ? "border-amber-200 bg-amber-50/50"
                     : "border-gray-100 bg-gray-50/50"
                 }`}
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-gray-200/50 flex items-center justify-center text-gray-600">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 shrink-0 rounded-lg bg-gray-200/50 flex items-center justify-center text-gray-600">
                     {getIcon(k.tipoChave)}
                   </div>
-                  <div className="flex flex-col">
+                  <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-gray-900 text-sm">
                         {k.tipoChave}
@@ -308,7 +354,7 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
                         </span>
                       )}
                     </div>
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm font-medium text-gray-900 truncate">
                       {k.valorChave}
                     </span>
                     <span className="text-xs text-gray-500 mt-0.5">
@@ -316,53 +362,71 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  {suspended ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleChangeStatus(k.chaveId, "desbloquear")
-                      }
-                      disabled={busyId === k.chaveId || isLimitReached}
-                      className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 px-2.5 py-2 rounded-lg transition-colors disabled:opacity-50"
-                      title="Desbloquear chave PIX"
-                    >
-                      {busyId === k.chaveId ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Unlock className="w-4 h-4" />
-                      )}
-                      Desbloquear Chave
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleChangeStatus(k.chaveId, "suspender")}
-                      disabled={busyId === k.chaveId}
-                      className="flex items-center gap-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50 px-2.5 py-2 rounded-lg transition-colors disabled:opacity-50"
-                      title="Suspender chave PIX"
-                    >
-                      {busyId === k.chaveId ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Lock className="w-4 h-4" />
-                      )}
-                      Suspender Chave
-                    </button>
-                  )}
+                <div className="flex items-center gap-1 shrink-0">
                   <button
                     type="button"
-                    onClick={() => handleDeleteKey(k.chaveId)}
-                    disabled={deletingId === k.chaveId}
-                    className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors disabled:opacity-50"
-                    title="Excluir chave PIX"
+                    onClick={() => void handleCopyKey(k.chaveId, k.valorChave)}
+                    className="text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg transition-colors"
+                    title="Copiar chave PIX"
                   >
-                    {deletingId === k.chaveId ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-red-600" />
+                    {copiedId === k.chaveId ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     ) : (
-                      <Trash2 className="w-5 h-5" />
+                      <Copy className="w-4 h-4" />
                     )}
                   </button>
+                  {canManageKeys && (
+                    <>
+                      {suspended ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleChangeStatus(k.chaveId, "desbloquear")
+                          }
+                          disabled={busyId === k.chaveId || isLimitReached}
+                          className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 px-2.5 py-2 rounded-lg transition-colors disabled:opacity-50"
+                          title="Desbloquear chave PIX"
+                        >
+                          {busyId === k.chaveId ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Unlock className="w-4 h-4" />
+                          )}
+                          Desbloquear Chave
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleChangeStatus(k.chaveId, "suspender")
+                          }
+                          disabled={busyId === k.chaveId}
+                          className="flex items-center gap-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50 px-2.5 py-2 rounded-lg transition-colors disabled:opacity-50"
+                          title="Suspender chave PIX"
+                        >
+                          {busyId === k.chaveId ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Lock className="w-4 h-4" />
+                          )}
+                          Suspender Chave
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteKey(k.chaveId)}
+                        disabled={deletingId === k.chaveId}
+                        className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors disabled:opacity-50"
+                        title="Excluir chave PIX"
+                      >
+                        {deletingId === k.chaveId ? (
+                          <Loader2 className="w-5 h-5 animate-spin text-red-600" />
+                        ) : (
+                          <Trash2 className="w-5 h-5" />
+                        )}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             );
@@ -370,63 +434,74 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
         )}
       </div>
 
-      <div className="flex flex-col gap-2.5">
-        <Button
-          type="button"
-          onClick={handleAddCpfKey}
-          disabled={
-            addingKey ||
-            loading ||
-            !user?.document ||
-            hasCpfKey ||
-            isLimitReached
-          }
-          className="w-full bg-black hover:bg-gray-900 text-white gap-2 h-11 disabled:opacity-50"
-        >
-          {addingKey ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Plus className="w-4 h-4" />
+      {canManageKeys ? (
+        <div className="flex flex-col gap-2.5">
+          {isTitular && (
+            <>
+              <Button
+                type="button"
+                onClick={handleAddCpfKey}
+                disabled={
+                  addingKey ||
+                  loading ||
+                  !user?.document ||
+                  hasCpfKey ||
+                  isLimitReached
+                }
+                className="w-full bg-black hover:bg-gray-900 text-white gap-2 h-11 disabled:opacity-50"
+              >
+                {addingKey ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4" />
+                )}
+                {hasCpfKey
+                  ? "CPF Já Vinculado"
+                  : `Vincular CPF (${user?.document || ""})`}
+              </Button>
+              <Button
+                type="button"
+                onClick={handleAddEmailKey}
+                disabled={
+                  addingKey ||
+                  loading ||
+                  !user?.email ||
+                  hasEmailKey ||
+                  isLimitReached
+                }
+                className="w-full bg-gray-800 hover:bg-black text-white gap-2 h-11 disabled:opacity-50"
+              >
+                {addingKey ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4" />
+                )}
+                {hasEmailKey
+                  ? "E-mail Já Vinculado"
+                  : `Vincular E-mail (${user?.email || ""})`}
+              </Button>
+            </>
           )}
-          {hasCpfKey
-            ? "CPF Já Vinculado"
-            : `Vincular CPF (${user?.document || ""})`}
-        </Button>
-        <Button
-          type="button"
-          onClick={handleAddEmailKey}
-          disabled={
-            addingKey ||
-            loading ||
-            !user?.email ||
-            hasEmailKey ||
-            isLimitReached
-          }
-          className="w-full bg-gray-800 hover:bg-black text-white gap-2 h-11 disabled:opacity-50"
-        >
-          {addingKey ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Plus className="w-4 h-4" />
-          )}
-          {hasEmailKey
-            ? "E-mail Já Vinculado"
-            : `Vincular E-mail (${user?.email || ""})`}
-        </Button>
-        <Button
-          type="button"
-          onClick={handleAddRandomKey}
-          disabled={addingKey || loading || isLimitReached}
-          className="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 gap-2 h-11 border-none disabled:opacity-50"
-        >
-          {addingKey ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Sparkles className="w-4 h-4" />
-          )}
-          Gerar Chave Aleatória (EVP)
-        </Button>
-      </div>
+          <Button
+            type="button"
+            onClick={handleAddRandomKey}
+            disabled={addingKey || loading || isLimitReached}
+            className="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 gap-2 h-11 border-none disabled:opacity-50"
+          >
+            {addingKey ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+            Gerar Chave Aleatória (EVP)
+          </Button>
+        </div>
+      ) : (
+        <div className="bg-indigo-50/70 border border-indigo-100 rounded-lg p-3 text-xs text-indigo-700">
+          Acesso de consulta ({userRole}): você pode visualizar e copiar as
+          chaves PIX desta conta.
+        </div>
+      )}
 
       <div className="bg-gray-50 border border-gray-100 rounded-lg p-4 flex items-center justify-between text-gray-500 text-xs">
         <div className="flex gap-2 items-center">
