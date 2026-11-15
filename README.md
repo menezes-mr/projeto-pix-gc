@@ -74,6 +74,32 @@ docker compose logs -f frontend
 docker exec -it pix_backend npm test
 ```
 
+Para executar as suítes de integração, use um PostgreSQL **exclusivo para testes**
+cujo usuário possa criar e remover schemas. Na pasta `backend`, configure
+`PIX_TEST_DATABASE_URL` e execute `npm run test:pix-agendado` e
+`npm run test:soa3`. Os testes criam schemas isolados e os removem ao terminar.
+
+### Autenticação e acesso administrativo
+
+As operações de conta e de perfil exigem token JWT; o usuário só pode acessar
+seus próprios dados e as contas das quais é titular. As rotas administrativas
+exigem também o papel `ADMIN` no campo `Usuario.papelSistema`, consultado no
+banco a cada requisição. Nenhum cadastro recebe esse papel automaticamente.
+Para autorizar um administrador, um operador do banco deve atualizar esse campo
+para `ADMIN` no registro do usuário correspondente; para revogar, use `USUARIO`.
+O cabeçalho `x-user-role` não concede acesso.
+
+A migration `20261115000000_papel_sistema` adiciona esse campo com valor padrão
+`USUARIO`. Para bancos gerenciados por migrations, aplique
+`npx prisma migrate deploy` na pasta `backend`. Bancos existentes criados com
+`prisma db push` podem precisar de uma linha de base de migrations antes de
+utilizar `migrate deploy`; não recrie nem descarte seus dados para essa transição.
+
+Configure `JWT_SECRET` com um segredo próprio no ambiente de execução. Em
+`NODE_ENV=production`, o backend não inicia se essa variável estiver ausente.
+O Docker Compose usa o valor do `.env`, ou uma chave de desenvolvimento se ele
+não for informado.
+
 ### Executar validação de código (Linter)
 ```bash
 docker exec -it pix_backend npm run lint

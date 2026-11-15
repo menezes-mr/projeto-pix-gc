@@ -13,6 +13,7 @@ import {
   UseGuards,
   DefaultValuePipe,
   ParseIntPipe,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsuariosService } from './usuarios.service';
@@ -45,20 +46,41 @@ export class UsuariosController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Excluir usuário por ID' })
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string, @Req() req: RequestAutenticada) {
+    this.verificarProprioUsuario(id, req);
     return this.usuariosService.remove(id);
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Buscar dados do usuário por ID' })
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id') id: string, @Req() req: RequestAutenticada) {
+    this.verificarProprioUsuario(id, req);
     return this.usuariosService.findOne(id);
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Atualizar dados e preferências do usuário' })
-  update(@Param('id') id: string, @Body() updateUsuarioDto: UpdateUsuarioDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateUsuarioDto: UpdateUsuarioDto,
+    @Req() req: RequestAutenticada,
+  ) {
+    this.verificarProprioUsuario(id, req);
     return this.usuariosService.update(id, updateUsuarioDto);
+  }
+
+  private verificarProprioUsuario(id: string, req: RequestAutenticada) {
+    if (id !== req.user.usuarioId) {
+      throw new ForbiddenException(
+        'Acesso permitido apenas ao próprio usuário',
+      );
+    }
   }
 }

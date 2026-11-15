@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -10,6 +11,8 @@ import { StatusTransacao } from '../common/enums/status.enum';
 import { TipoOperacao } from '../common/enums/tipo-operacao.enum';
 import { PrismaService } from '../prisma/prisma.service';
 import { HistoricoPixService } from '../shared/historico-pix/historico-pix.service';
+import { limiteDiarioExcedido } from '../shared/historico-pix/limite-diario-pix';
+import { EstornoPixDto } from './dto/estorno-pix.dto';
 import { TransferenciaPixDto } from './dto/transferencia-pix.dto';
 
 export interface ContextoTransferenciaPix {
@@ -24,6 +27,85 @@ export class PixTransferenciaService {
     private readonly eventEmitter: EventEmitter2,
     private readonly historicoPixService: HistoricoPixService,
   ) {}
+
+  async estornar(contexto: ContextoTransferenciaPix, dto: EstornoPixDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const original = await tx.transacaoPix.findUnique({
+        where: { transacaoId: dto.transacaoIdOriginal },
+      });
+      if (!original)
+        throw new NotFoundException('Transação original não encontrada');
+      if (original.contaDestinoId !== contexto.contaOrigemId)
+        throw new ForbiddenException(
+          'Apenas a conta recebedora pode devolver o PIX',
+        );
+      const titular = await tx.usuarioConta.findFirst({
+        where: {
+          contaId: contexto.contaOrigemId,
+          usuarioId: contexto.usuarioId,
+          papel: 'TITULAR',
+          usuario: { status: 'ATIVO' },
+          conta: { status: 'ATIVA' },
+        },
+      });
+      if (!titular)
+        throw new ForbiddenException(
+          'Conta ou usuário sem permissão para estornar',
+        );
+      if (original.transacaoEstornoId)
+        throw new ConflictException('Transação já estornada');
+      if (original.status !== 'EFETIVADA')
+        throw new BadRequestException('Transação não está efetivada');
+      if (
+        original.tipoOperacao === 'ESTORNO' ||
+        !original.contaOrigemId ||
+        original.contaOrigemId === original.contaDestinoId ||
+        original.valor.lessThanOrEqualTo(0)
+      )
+        throw new BadRequestException('Transação não elegível para devolução');
+      const estorno = await tx.transacaoPix.create({
+        data: {
+          valor: original.valor,
+          tipoOperacao: 'ESTORNO',
+          status: 'EFETIVADA',
+          dataEfetivacao: new Date(),
+          contaOrigemId: original.contaDestinoId,
+          contaDestinoId: original.contaOrigemId,
+          usuarioSolicitanteId: contexto.usuarioId,
+          motivoEstorno: dto.motivo?.trim() || null,
+        },
+      });
+      // A atualização condicional bloqueia a linha e apenas uma transação concorrente vence.
+      const vinculo = await tx.transacaoPix.updateMany({
+        where: {
+          transacaoId: original.transacaoId,
+          transacaoEstornoId: null,
+          status: 'EFETIVADA',
+        },
+        data: { transacaoEstornoId: estorno.transacaoId },
+      });
+      if (vinculo.count !== 1)
+        throw new ConflictException('Transação já estornada');
+      const debito = await tx.conta.updateMany({
+        where: {
+          contaId: contexto.contaOrigemId,
+          status: 'ATIVA',
+          saldo: { gte: original.valor },
+        },
+        data: { saldo: { decrement: original.valor } },
+      });
+      if (debito.count !== 1)
+        throw new BadRequestException('Saldo insuficiente para devolução');
+      await tx.conta.update({
+        where: { contaId: original.contaOrigemId },
+        data: { saldo: { increment: original.valor } },
+      });
+      await tx.logAtividade.create({
+        data: { usuarioId: contexto.usuarioId, acao: 'ESTORNO_PIX' },
+      });
+      return estorno;
+    });
+  }
 
   async transferir(
     contexto: ContextoTransferenciaPix,
@@ -78,7 +160,7 @@ export class PixTransferenciaService {
         );
       }
 
-      if (valor.greaterThan(contaOrigem.limiteDiarioPix)) {
+      if (dataAgendamento && valor.greaterThan(contaOrigem.limiteDiarioPix)) {
         throw new BadRequestException(
           'O valor ultrapassa o limite diário PIX da conta',
         );
@@ -116,7 +198,34 @@ export class PixTransferenciaService {
         );
       }
 
+      let instanteEfetivacao: Date | undefined;
       if (!dataAgendamento) {
+        // A mesma ordem de bloqueio é usada pelo executor dos agendamentos.
+        await tx.$queryRaw`
+          SELECT "contaId" FROM "Conta"
+          WHERE "contaId" IN (${contaOrigemId}, ${chaveDestino.contaId})
+          ORDER BY "contaId" FOR UPDATE
+        `;
+        const origemBloqueada = await tx.conta.findUniqueOrThrow({
+          where: { contaId: contaOrigemId },
+        });
+        if (origemBloqueada.status !== 'ATIVA') {
+          throw new ForbiddenException('A conta de origem precisa estar ativa');
+        }
+        instanteEfetivacao = new Date();
+        if (
+          await limiteDiarioExcedido(
+            tx,
+            contaOrigemId,
+            valor,
+            origemBloqueada.limiteDiarioPix,
+            instanteEfetivacao,
+          )
+        ) {
+          throw new BadRequestException(
+            'O valor ultrapassa o limite diário PIX da conta',
+          );
+        }
         const contaOrigemAtualizada = await tx.conta.update({
           where: { contaId: contaOrigemId },
           data: {
@@ -150,6 +259,7 @@ export class PixTransferenciaService {
           usuarioSolicitanteId: usuarioId,
         },
         tx,
+        instanteEfetivacao,
       );
 
       await tx.logAtividade.create({

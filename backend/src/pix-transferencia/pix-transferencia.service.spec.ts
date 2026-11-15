@@ -11,11 +11,16 @@ import { PixTransferenciaService } from './pix-transferencia.service';
 
 function criarPrismaMock() {
   const tx = {
+    $queryRaw: jest.fn().mockResolvedValue([{ total: new Prisma.Decimal(0) }]),
     conta: {
       findUnique: jest.fn().mockResolvedValue({
         status: 'ATIVA',
         limiteDiarioPix: new Prisma.Decimal(1000),
         usuarios: [{ papel: 'TITULAR', usuario: { status: 'ATIVO' } }],
+      }),
+      findUniqueOrThrow: jest.fn().mockResolvedValue({
+        status: 'ATIVA',
+        limiteDiarioPix: new Prisma.Decimal(1000),
       }),
       update: jest.fn().mockResolvedValue({ saldo: new Prisma.Decimal(900) }),
     },
@@ -61,6 +66,7 @@ describe('PixTransferenciaService com HistoricoPixService', () => {
     dataEfetivacao: new Date('2026-09-22T12:00:00.000Z'),
     transacaoExternaId: null,
     transacaoEstornoId: null,
+    motivoEstorno: null,
   };
 
   let modulo: TestingModule;
@@ -104,7 +110,11 @@ describe('PixTransferenciaService com HistoricoPixService', () => {
     const resultado = await service.transferir(contexto, dto);
 
     expect(registrarTransacao).toHaveBeenCalledTimes(1);
-    expect(registrarTransacao).toHaveBeenCalledWith(dadosHistorico, tx);
+    expect(registrarTransacao).toHaveBeenCalledWith(
+      dadosHistorico,
+      tx,
+      expect.any(Date),
+    );
     expect(tx.transacaoPix.create).toHaveBeenCalledTimes(1);
     const dadosGravados = tx.transacaoPix.create.mock.calls[0][0].data;
     expect(dadosGravados).toMatchObject(dadosHistorico);
@@ -147,7 +157,11 @@ describe('PixTransferenciaService com HistoricoPixService', () => {
     });
 
     expect(registrarTransacao).toHaveBeenCalledTimes(1);
-    expect(registrarTransacao).toHaveBeenCalledWith(dadosAgendamento, tx);
+    expect(registrarTransacao).toHaveBeenCalledWith(
+      dadosAgendamento,
+      tx,
+      undefined,
+    );
     expect(tx.transacaoPix.create).toHaveBeenCalledTimes(1);
     expect(tx.transacaoPix.create).toHaveBeenCalledWith({
       data: { ...dadosAgendamento, dataEfetivacao: null },
@@ -164,7 +178,11 @@ describe('PixTransferenciaService com HistoricoPixService', () => {
 
     await expect(service.transferir(contexto, dto)).rejects.toBe(erro);
 
-    expect(registrarTransacao).toHaveBeenCalledWith(dadosHistorico, tx);
+    expect(registrarTransacao).toHaveBeenCalledWith(
+      dadosHistorico,
+      tx,
+      expect.any(Date),
+    );
     expect(tx.logAtividade.create).not.toHaveBeenCalled();
     expect(emitirEvento).not.toHaveBeenCalled();
   });

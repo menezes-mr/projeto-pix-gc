@@ -16,6 +16,7 @@ import {
 } from '../common/enums/status.enum';
 import { TipoOperacao } from '../common/enums/tipo-operacao.enum';
 import { PrismaService } from '../prisma/prisma.service';
+import { limiteDiarioExcedido } from '../shared/historico-pix/limite-diario-pix';
 
 class RegraNegocioPixError extends Error {}
 
@@ -215,6 +216,19 @@ export class PixAgendadoService {
       );
     }
 
+    const instanteEfetivacao = new Date();
+    if (
+      await limiteDiarioExcedido(
+        tx,
+        contaOrigemId,
+        valor,
+        origem.limiteDiarioPix,
+        instanteEfetivacao,
+      )
+    ) {
+      throw new RegraNegocioPixError('Limite diário PIX ultrapassado');
+    }
+
     const origemAtualizada = await tx.conta.update({
       where: { contaId: contaOrigemId },
       data: { saldo: { decrement: valor } },
@@ -231,7 +245,7 @@ export class PixAgendadoService {
       where: { transacaoId: pendente.transacaoId },
       data: {
         status: StatusTransacao.EFETIVADA,
-        dataEfetivacao: new Date(),
+        dataEfetivacao: instanteEfetivacao,
       },
     });
     await tx.logAtividade.create({

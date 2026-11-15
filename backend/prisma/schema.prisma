@@ -15,6 +15,7 @@ model Usuario {
   email           String         @unique
   telefone        String?
   status          String         @default("ATIVO")
+  papelSistema    String         @default("USUARIO")
   dataCriacao     DateTime       @default(now())
   dataAtualizacao DateTime       @updatedAt
   senha           String
@@ -89,6 +90,7 @@ model TransacaoPix {
 
   transacaoExternaId String?   @unique  
   transacaoEstornoId String?   @unique
+  motivoEstorno      String?
   contaOrigemId      String?             
   contaDestinoId     String?
   usuarioSolicitanteId String?
