@@ -56,7 +56,6 @@ export class ContaService {
         usuarios: {
           some: {
             usuarioId: idUsuarioLogado,
-            papel: PapelUsuarioConta.TITULAR,
           },
         },
       },
@@ -336,7 +335,7 @@ export class ContaService {
     }
 
     const vinculo = await this.prisma.usuarioConta.findFirst({
-      where: { contaId, usuarioId: usuarioIdLogado, papel: 'TITULAR' },
+      where: { contaId, usuarioId: usuarioIdLogado },
     });
 
     if (!vinculo) {

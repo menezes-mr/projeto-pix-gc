@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -24,7 +25,18 @@ export class AuthService {
       },
       include: {
         contas: {
-          include: { conta: true },
+          include: {
+            conta: {
+              include: {
+                usuarios: {
+                  where: { papel: 'TITULAR' },
+                  include: {
+                    usuario: { select: { nomeCompleto: true } },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     });
@@ -49,8 +61,11 @@ export class AuthService {
       throw new UnauthorizedException('Usuário inativo.');
     }
 
-    let conta = usuario.contas[0]?.conta;
-    let contaId = usuario.contas[0]?.contaId || null;
+    const vinculoInicial =
+      usuario.contas.find((v) => v.papel === 'TITULAR') ?? usuario.contas[0];
+    let conta = vinculoInicial?.conta;
+    let contaId = vinculoInicial?.contaId || null;
+    const papelAtivo = vinculoInicial?.papel || 'TITULAR';
 
     if (conta && conta.status === 'BLOQUEADA') {
       throw new ForbiddenException(
@@ -68,6 +83,14 @@ export class AuthService {
           limiteDiarioPix: 1000.0,
           status: 'ATIVA',
         },
+        include: {
+          usuarios: {
+            where: { papel: 'TITULAR' },
+            include: {
+              usuario: { select: { nomeCompleto: true } },
+            },
+          },
+        },
       });
 
       await this.prisma.usuarioConta.create({
@@ -83,6 +106,17 @@ export class AuthService {
     }
 
     const payload = { sub: usuario.usuarioId, email: usuario.email, contaId };
+    const contasVinculadas = usuario.contas.map((v) => ({
+      contaId: v.contaId,
+      agencia: v.conta.agencia,
+      numeroConta: v.conta.numeroConta,
+      saldo: Number(v.conta.saldo),
+      limiteDiarioPix: Number(v.conta.limiteDiarioPix),
+      status: v.conta.status,
+      papel: v.papel,
+      titularNome:
+        v.conta.usuarios?.[0]?.usuario?.nomeCompleto || usuario.nomeCompleto,
+    }));
 
     return {
       access_token: this.jwtService.sign(payload),
@@ -93,6 +127,7 @@ export class AuthService {
         documento: usuario.cpfCnpj,
         telefone: usuario.telefone,
         contaId,
+        papel: papelAtivo,
         saldo: Number(conta.saldo),
         agencia: conta.agencia,
         numeroConta: conta.numeroConta,
@@ -101,6 +136,90 @@ export class AuthService {
         receberSms: usuario.receberSms,
         receberEmail: usuario.receberEmail,
         receberPush: usuario.receberPush,
+        contas: contasVinculadas,
+      },
+    };
+  }
+
+  async listarMinhasContas(usuarioId: string) {
+    const vinculos = await this.prisma.usuarioConta.findMany({
+      where: { usuarioId },
+      include: {
+        conta: {
+          include: {
+            usuarios: {
+              where: { papel: 'TITULAR' },
+              include: {
+                usuario: { select: { nomeCompleto: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return vinculos.map((v) => ({
+      contaId: v.contaId,
+      agencia: v.conta.agencia,
+      numeroConta: v.conta.numeroConta,
+      saldo: Number(v.conta.saldo),
+      limiteDiarioPix: Number(v.conta.limiteDiarioPix),
+      status: v.conta.status,
+      papel: v.papel,
+      titularNome: v.conta.usuarios?.[0]?.usuario?.nomeCompleto || 'Titular',
+    }));
+  }
+
+  async trocarConta(usuarioId: string, contaId: string) {
+    const usuario = await this.prisma.usuario.findFirst({
+      where: { usuarioId, status: 'ATIVO' },
+    });
+
+    if (!usuario) {
+      throw new NotFoundException('Usuário não encontrado ou inativo.');
+    }
+
+    const vinculo = await this.prisma.usuarioConta.findFirst({
+      where: { usuarioId, contaId },
+      include: {
+        conta: true,
+      },
+    });
+
+    if (!vinculo) {
+      throw new ForbiddenException(
+        'Você não possui vínculo com a conta bancária selecionada.',
+      );
+    }
+
+    if (vinculo.conta.status === 'BLOQUEADA') {
+      throw new ForbiddenException(
+        'Acesso bloqueado: Conta bancária bloqueada por suspeita de fraude.',
+      );
+    }
+
+    const contasVinculadas = await this.listarMinhasContas(usuarioId);
+    const payload = { sub: usuario.usuarioId, email: usuario.email, contaId };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      usuario: {
+        id: usuario.usuarioId,
+        nome: usuario.nomeCompleto,
+        email: usuario.email,
+        documento: usuario.cpfCnpj,
+        telefone: usuario.telefone,
+        contaId: vinculo.contaId,
+        papel: vinculo.papel,
+        saldo: Number(vinculo.conta.saldo),
+        agencia: vinculo.conta.agencia,
+        numeroConta: vinculo.conta.numeroConta,
+        statusConta: vinculo.conta.status,
+        limiteDiarioPix: Number(vinculo.conta.limiteDiarioPix),
+        receberSms: usuario.receberSms,
+        receberEmail: usuario.receberEmail,
+        receberPush: usuario.receberPush,
+        contas: contasVinculadas,
       },
     };
   }
