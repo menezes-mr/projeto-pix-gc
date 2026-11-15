@@ -1,15 +1,62 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Zap, FileText, User, Bell, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
+import { api } from "@/lib/api";
 
 export function Header() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshAccount } = useAuth();
+  const [notificacoesAbertas, setNotificacoesAbertas] = useState(false);
+  const [aviso, setAviso] = useState("");
+  const [ultimoAviso, setUltimoAviso] = useState("");
+  const contaId = user?.contaId;
+
+  useEffect(() => {
+    if (!contaId) return;
+    let ativo = true;
+    let consultando = false;
+    let inicializado = false;
+    const conhecidos = new Set<string>();
+    let temporizador: ReturnType<typeof setTimeout> | undefined;
+    async function consultar() {
+      if (consultando) return;
+      consultando = true;
+      try {
+        const resposta = await api.get<{ data: { transacaoId: string; status: string; contaDestinoId: string | null; valor: string }[] }>(
+          `/contas/${contaId}/transacoes`, { params: { page: 1, limit: 50 } },
+        );
+        if (!ativo) return;
+        const recebidos = resposta.data.data.filter((t) => t.status === "EFETIVADA" && t.contaDestinoId === contaId);
+        const novos = recebidos.filter((t) => !conhecidos.has(t.transacaoId));
+        recebidos.forEach((t) => conhecidos.add(t.transacaoId));
+        if (inicializado && novos.length) {
+          const mensagem = novos.length === 1
+            ? `Você recebeu um PIX de ${Number(novos[0].valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.`
+            : `Você recebeu ${novos.length} novos PIX. Confira o extrato.`;
+          setAviso(mensagem);
+          setUltimoAviso(mensagem);
+          clearTimeout(temporizador);
+          temporizador = setTimeout(() => setAviso(""), 8000);
+          void refreshAccount();
+        }
+        inicializado = true;
+      } catch {
+        // Uma falha temporária não deve impedir as próximas consultas.
+      } finally {
+        consultando = false;
+      }
+    }
+    void consultar();
+    const intervalo = setInterval(consultar, 30000);
+    return () => { ativo = false; clearInterval(intervalo); clearTimeout(temporizador); };
+  // A consulta deve reiniciar apenas quando a conta mudar.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contaId]);
 
   const navItems = [
     { label: "Início", href: "/", icon: Home, noAction: false },
@@ -68,14 +115,23 @@ export function Header() {
       </nav>
 
       <div className="flex items-center gap-2">
+        <div className="relative">
         <button
           type="button"
-          onClick={(e) => e.preventDefault()}
+          onClick={() => setNotificacoesAbertas((aberto) => !aberto)}
+          aria-expanded={notificacoesAbertas}
+          aria-controls="painel-notificacoes"
           title="Notificações"
           className="relative p-2 rounded-full bg-gray-50 hover:bg-gray-100 transition-colors text-gray-600 cursor-pointer"
         >
           <Bell className="w-5 h-5" />
         </button>
+        {notificacoesAbertas && (
+          <div id="painel-notificacoes" role="status" className="absolute right-0 top-full mt-2 w-64 rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-900 shadow-lg">
+            {ultimoAviso || "Nenhum novo PIX recebido nesta sessão."}
+          </div>
+        )}
+        </div>
         <button
           type="button"
           onClick={logout}
@@ -85,6 +141,11 @@ export function Header() {
           <LogOut className="w-5 h-5" />
         </button>
       </div>
+      {aviso && (
+        <div role="status" className="fixed right-4 top-20 z-50 max-w-sm rounded-lg border border-emerald-200 bg-white p-4 text-gray-900 shadow-lg">
+          {aviso}
+        </div>
+      )}
     </header>
   );
 }

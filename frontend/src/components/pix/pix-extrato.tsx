@@ -88,7 +88,7 @@ export function PixExtrato({ revisao }: { revisao: number }) {
     selecionada.status === "EFETIVADA" &&
     !selecionada.transacaoEstornoId;
   return (
-    <section className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col gap-3">
+    <section className="bg-white text-gray-900 rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col gap-3">
       <div>
         <h2 className="font-bold text-xl">Extrato PIX</h2>
         <p className="text-sm text-gray-500">Últimas 50 transações</p>
@@ -153,7 +153,7 @@ export function PixExtrato({ revisao }: { revisao: number }) {
           aria-label={confirmar ? "Confirmar devolução" : "Detalhes do PIX"}
           className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
         >
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-auto flex flex-col gap-3">
+          <div className="bg-white text-gray-900 rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-auto flex flex-col gap-3">
             <h3 className="text-xl font-bold">
               {confirmar ? "Confirmar devolução" : "Detalhes do PIX"}
             </h3>
