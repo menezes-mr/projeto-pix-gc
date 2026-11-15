@@ -128,149 +128,154 @@ export class PixTransferenciaService {
       }
     }
 
-    const transacao = await this.prisma.$transaction(async (tx) => {
-      const contaOrigem = await tx.conta.findUnique({
-        where: { contaId: contaOrigemId },
-        include: {
-          usuarios: {
-            where: { usuarioId },
-            include: { usuario: true },
-          },
-        },
-      });
-
-      if (!contaOrigem) {
-        throw new NotFoundException('Conta de origem não encontrada');
-      }
-
-      const vinculo = contaOrigem.usuarios[0];
-
-      if (!vinculo || vinculo.papel !== 'TITULAR') {
-        throw new ForbiddenException(
-          'O usuário não é titular da conta de origem',
-        );
-      }
-
-      if (
-        contaOrigem.status !== 'ATIVA' ||
-        vinculo.usuario.status !== 'ATIVO'
-      ) {
-        throw new ForbiddenException(
-          'A conta de origem e o usuário precisam estar ativos',
-        );
-      }
-
-      if (dataAgendamento && valor.greaterThan(contaOrigem.limiteDiarioPix)) {
-        throw new BadRequestException(
-          'O valor ultrapassa o limite diário PIX da conta',
-        );
-      }
-
-      const chaveDestino = await tx.chavePix.findUnique({
-        where: { valorChave: chavePixDestino },
-        include: {
-          conta: {
-            include: {
-              usuarios: true,
+    const transacao = await this.prisma.$transaction(
+      async (tx) => {
+        const contaOrigem = await tx.conta.findUnique({
+          where: { contaId: contaOrigemId },
+          include: {
+            usuarios: {
+              where: { usuarioId },
+              include: { usuario: true },
             },
           },
-        },
-      });
-
-      if (chaveDestino?.status === 'SUSPENSA') {
-        throw new BadRequestException('A chave PIX de destino está suspensa');
-      }
-
-      if (
-        !chaveDestino ||
-        chaveDestino.status !== 'ATIVA' ||
-        chaveDestino.conta.status !== 'ATIVA'
-      ) {
-        throw new NotFoundException('Chave PIX de destino inválida');
-      }
-
-      if (
-        chaveDestino.contaId === contaOrigemId ||
-        chaveDestino.conta.usuarios?.some((u) => u.usuarioId === usuarioId)
-      ) {
-        throw new BadRequestException(
-          'Não é possível transferir para você mesmo ou para a sua própria conta',
-        );
-      }
-
-      let instanteEfetivacao: Date | undefined;
-      if (!dataAgendamento) {
-        // A mesma ordem de bloqueio é usada pelo executor dos agendamentos.
-        await tx.$queryRaw`
-          SELECT "contaId" FROM "Conta"
-          WHERE "contaId" IN (${contaOrigemId}, ${chaveDestino.contaId})
-          ORDER BY "contaId" FOR UPDATE
-        `;
-        const origemBloqueada = await tx.conta.findUniqueOrThrow({
-          where: { contaId: contaOrigemId },
         });
-        if (origemBloqueada.status !== 'ATIVA') {
-          throw new ForbiddenException('A conta de origem precisa estar ativa');
+
+        if (!contaOrigem) {
+          throw new NotFoundException('Conta de origem não encontrada');
         }
-        instanteEfetivacao = new Date();
+
+        const vinculo = contaOrigem.usuarios[0];
+
+        if (!vinculo || vinculo.papel !== 'TITULAR') {
+          throw new ForbiddenException(
+            'O usuário não é titular da conta de origem',
+          );
+        }
+
         if (
-          await limiteDiarioExcedido(
-            tx,
-            contaOrigemId,
-            valor,
-            origemBloqueada.limiteDiarioPix,
-            instanteEfetivacao,
-          )
+          contaOrigem.status !== 'ATIVA' ||
+          vinculo.usuario.status !== 'ATIVO'
         ) {
+          throw new ForbiddenException(
+            'A conta de origem e o usuário precisam estar ativos',
+          );
+        }
+
+        if (dataAgendamento && valor.greaterThan(contaOrigem.limiteDiarioPix)) {
           throw new BadRequestException(
             'O valor ultrapassa o limite diário PIX da conta',
           );
         }
-        const contaOrigemAtualizada = await tx.conta.update({
-          where: { contaId: contaOrigemId },
-          data: {
-            saldo: { decrement: valor },
+
+        const chaveDestino = await tx.chavePix.findUnique({
+          where: { valorChave: chavePixDestino },
+          include: {
+            conta: {
+              include: {
+                usuarios: true,
+              },
+            },
           },
         });
 
-        if (contaOrigemAtualizada.saldo.lessThan(0)) {
-          throw new BadRequestException('Saldo insuficiente');
+        if (chaveDestino?.status === 'SUSPENSA') {
+          throw new BadRequestException('A chave PIX de destino está suspensa');
         }
 
-        await tx.conta.update({
-          where: { contaId: chaveDestino.contaId },
+        if (
+          !chaveDestino ||
+          chaveDestino.status !== 'ATIVA' ||
+          chaveDestino.conta.status !== 'ATIVA'
+        ) {
+          throw new NotFoundException('Chave PIX de destino inválida');
+        }
+
+        if (
+          chaveDestino.contaId === contaOrigemId ||
+          chaveDestino.conta.usuarios?.some((u) => u.usuarioId === usuarioId)
+        ) {
+          throw new BadRequestException(
+            'Não é possível transferir para você mesmo ou para a sua própria conta',
+          );
+        }
+
+        let instanteEfetivacao: Date | undefined;
+        if (!dataAgendamento) {
+          // A mesma ordem de bloqueio é usada pelo executor dos agendamentos.
+          await tx.$queryRaw`
+          SELECT "contaId" FROM "Conta"
+          WHERE "contaId" IN (${contaOrigemId}, ${chaveDestino.contaId})
+          ORDER BY "contaId" FOR UPDATE
+        `;
+          const origemBloqueada = await tx.conta.findUniqueOrThrow({
+            where: { contaId: contaOrigemId },
+          });
+          if (origemBloqueada.status !== 'ATIVA') {
+            throw new ForbiddenException(
+              'A conta de origem precisa estar ativa',
+            );
+          }
+          instanteEfetivacao = new Date();
+          if (
+            await limiteDiarioExcedido(
+              tx,
+              contaOrigemId,
+              valor,
+              origemBloqueada.limiteDiarioPix,
+              instanteEfetivacao,
+            )
+          ) {
+            throw new BadRequestException(
+              'O valor ultrapassa o limite diário PIX da conta',
+            );
+          }
+          const contaOrigemAtualizada = await tx.conta.update({
+            where: { contaId: contaOrigemId },
+            data: {
+              saldo: { decrement: valor },
+            },
+          });
+
+          if (contaOrigemAtualizada.saldo.lessThan(0)) {
+            throw new BadRequestException('Saldo insuficiente');
+          }
+
+          await tx.conta.update({
+            where: { contaId: chaveDestino.contaId },
+            data: {
+              saldo: { increment: valor },
+            },
+          });
+        }
+
+        const transacao = await this.historicoPixService.registrarTransacao(
+          {
+            chavePixUtilizada: chavePixDestino,
+            valor,
+            tipoOperacao: TipoOperacao.TRANSFERENCIA_SAIDA,
+            status: dataAgendamento
+              ? StatusTransacao.PENDENTE
+              : StatusTransacao.EFETIVADA,
+            ...(dataAgendamento ? { dataAgendamento } : {}),
+            contaOrigemId,
+            contaDestinoId: chaveDestino.contaId,
+            usuarioSolicitanteId: usuarioId,
+          },
+          tx,
+          instanteEfetivacao,
+        );
+
+        await tx.logAtividade.create({
           data: {
-            saldo: { increment: valor },
+            acao: 'TRANSFERENCIA PIX',
+            usuarioId,
           },
         });
-      }
 
-      const transacao = await this.historicoPixService.registrarTransacao(
-        {
-          chavePixUtilizada: chavePixDestino,
-          valor,
-          tipoOperacao: TipoOperacao.TRANSFERENCIA_SAIDA,
-          status: dataAgendamento
-            ? StatusTransacao.PENDENTE
-            : StatusTransacao.EFETIVADA,
-          ...(dataAgendamento ? { dataAgendamento } : {}),
-          contaOrigemId,
-          contaDestinoId: chaveDestino.contaId,
-          usuarioSolicitanteId: usuarioId,
-        },
-        tx,
-        instanteEfetivacao,
-      );
-
-      await tx.logAtividade.create({
-        data: {
-          acao: 'TRANSFERENCIA PIX',
-          usuarioId,
-        },
-      });
-
-      return transacao;
-    });
+        return transacao;
+      },
+      { maxWait: 10000, timeout: 20000 },
+    );
 
     if (!dataAgendamento) {
       this.eventEmitter.emit('pix.efetivado', transacao);

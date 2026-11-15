@@ -49,14 +49,16 @@ export function PixTransferFlow({ onCompleted }: { onCompleted?: () => void }) {
         chavePixDestino: recipient.chavePix,
         valor: amount,
         ...(scheduledAt ? { dataAgendamento: new Date(scheduledAt).toISOString() } : {}),
-      });
+      }, { timeout: 35000 });
       setTransaction(response.data);
       await refreshAccount();
       onCompleted?.();
       setStep(4);
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || "Erro ao transferir");
+        setError(!err.response || err.response.status >= 500
+          ? "Não foi possível confirmar a transferência. Confira o extrato antes de tentar novamente."
+          : err.response.data?.message || "Erro ao transferir");
       } else {
         setError("Erro ao transferir");
       }
