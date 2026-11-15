@@ -213,4 +213,30 @@ describe('PixTransferenciaService com HistoricoPixService', () => {
     expect(tx.logAtividade.create).not.toHaveBeenCalled();
     expect(emitirEvento).not.toHaveBeenCalled();
   });
+
+  it('persiste latitude e longitude na tabela TransacaoPix quando informadas no DTO', async () => {
+    const coordenadas = { latitude: -23.55052, longitude: -46.633308 };
+    const transacaoComCoordenadas: TransacaoPix = {
+      ...transacao,
+      ...coordenadas,
+    };
+    tx.transacaoPix.create.mockResolvedValue(transacaoComCoordenadas);
+
+    const resultado = await service.transferir(contexto, {
+      ...dto,
+      ...coordenadas,
+    });
+
+    expect(registrarTransacao).toHaveBeenCalledWith(
+      {
+        ...dadosHistorico,
+        ...coordenadas,
+      },
+      tx,
+    );
+    const dadosGravados = tx.transacaoPix.create.mock.calls[0][0].data;
+    expect(dadosGravados.latitude).toBe(coordenadas.latitude);
+    expect(dadosGravados.longitude).toBe(coordenadas.longitude);
+    expect(resultado).toBe(transacaoComCoordenadas);
+  });
 });

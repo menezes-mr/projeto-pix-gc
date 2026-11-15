@@ -11,6 +11,7 @@ import { UsuariosModule } from './usuarios/usuarios.module';
 import { NotificacaoModule } from './notificacao/notificacao.module';
 import { AuthModule } from './auth/auth.module';
 import { RelatoriosModule } from './relatorios/relatorios.module';
+import { ContatosPixModule } from './contatos-pix/contatos-pix.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { RelatoriosModule } from './relatorios/relatorios.module';
     NotificacaoModule,
     AuthModule,
     RelatoriosModule,
+    ContatosPixModule,
   ],
   controllers: [],
   providers: [],

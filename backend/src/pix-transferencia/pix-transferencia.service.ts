@@ -145,6 +145,8 @@ export class PixTransferenciaService {
             ? StatusTransacao.PENDENTE
             : StatusTransacao.EFETIVADA,
           ...(dataAgendamento ? { dataAgendamento } : {}),
+          ...(dto.latitude !== undefined ? { latitude: dto.latitude } : {}),
+          ...(dto.longitude !== undefined ? { longitude: dto.longitude } : {}),
           contaOrigemId,
           contaDestinoId: chaveDestino.contaId,
           usuarioSolicitanteId: usuarioId,
