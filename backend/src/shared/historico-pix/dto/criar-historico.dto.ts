@@ -11,4 +11,6 @@ export interface CriarHistoricoDto {
   chavePixUtilizada?: string;
   dataAgendamento?: Date;
   usuarioSolicitanteId?: string;
+  latitude?: number;
+  longitude?: number;
 }
