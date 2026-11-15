@@ -251,6 +251,7 @@ describe('PixTransferenciaService com HistoricoPixService', () => {
         ...coordenadas,
       },
       tx,
+      expect.any(Date),
     );
     const dadosGravados = tx.transacaoPix.create.mock.calls[0][0].data;
     expect(dadosGravados.latitude).toBe(coordenadas.latitude);
