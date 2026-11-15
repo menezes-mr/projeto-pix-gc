@@ -62,7 +62,12 @@ export class AuthService {
     }
 
     const vinculoInicial =
-      usuario.contas.find((v) => v.papel === 'TITULAR') ?? usuario.contas[0];
+      usuario.contas.find(
+        (v) => v.papel === 'TITULAR' && v.conta.status === 'ATIVA',
+      ) ??
+      usuario.contas.find((v) => v.conta.status === 'ATIVA') ??
+      usuario.contas.find((v) => v.papel === 'TITULAR') ??
+      usuario.contas[0];
     let conta = vinculoInicial?.conta;
     let contaId = vinculoInicial?.contaId || null;
     const papelAtivo = vinculoInicial?.papel || 'TITULAR';

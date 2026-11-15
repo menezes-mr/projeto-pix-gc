@@ -8,6 +8,7 @@ import {
   Delete,
   Patch,
   Param,
+  Query,
   UseGuards,
   Req,
 } from '@nestjs/common';
@@ -15,6 +16,7 @@ import {
   ApiBearerAuth,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { PixKeyService } from './pix-key.service';
@@ -30,19 +32,26 @@ export class PixKeyController {
   @Get('minhas')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Listar chaves PIX ativas da conta autenticada' })
-  async listarMinhasChaves(@Req() req: RequestAutenticada) {
-    return this.pixKeyService.listarChavesDaConta(req.user.contaId as string);
+  @ApiQuery({ name: 'contaId', required: false, type: String })
+  async listarMinhasChaves(
+    @Req() req: RequestAutenticada,
+    @Query('contaId') contaIdQuery?: string,
+  ) {
+    const contaId = contaIdQuery || req.user.contaId;
+    return this.pixKeyService.listarChavesDaConta(contaId, req.user.usuarioId);
   }
 
   @Post('aleatoria')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Criar chave PIX aleatória (EVP)' })
-  async createAleatoria(@Req() req: RequestAutenticada) {
-    return this.pixKeyService.generateRandomKey(
-      req.user.contaId as string,
-      req.user.usuarioId,
-    );
+  @ApiQuery({ name: 'contaId', required: false, type: String })
+  async createAleatoria(
+    @Req() req: RequestAutenticada,
+    @Query('contaId') contaIdQuery?: string,
+  ) {
+    const contaId = contaIdQuery || req.user.contaId;
+    return this.pixKeyService.generateRandomKey(contaId, req.user.usuarioId);
   }
 
   @Post()
@@ -53,7 +62,7 @@ export class PixKeyController {
     @Body() dto: CreateChavePixDto,
     @Req() req: RequestAutenticada,
   ) {
-    dto.contaId = req.user.contaId;
+    dto.contaId = dto.contaId || req.user.contaId;
     dto.usuarioId = req.user.usuarioId;
     return this.pixKeyService.associarChavePix(dto);
   }
@@ -66,12 +75,14 @@ export class PixKeyController {
     name: 'id',
     description: 'ID da chave (chaveId) ou valor da chave',
   })
-  async inativarChave(@Param('id') id: string, @Req() req: RequestAutenticada) {
-    return this.pixKeyService.inativarChavePix(
-      id,
-      req.user.contaId as string,
-      req.user.usuarioId,
-    );
+  @ApiQuery({ name: 'contaId', required: false, type: String })
+  async inativarChave(
+    @Param('id') id: string,
+    @Req() req: RequestAutenticada,
+    @Query('contaId') contaIdQuery?: string,
+  ) {
+    const contaId = contaIdQuery || req.user.contaId;
+    return this.pixKeyService.inativarChavePix(id, contaId, req.user.usuarioId);
   }
 
   @Patch(':id/suspender')
@@ -82,15 +93,14 @@ export class PixKeyController {
     name: 'id',
     description: 'ID da chave (chaveId) ou valor da chave',
   })
+  @ApiQuery({ name: 'contaId', required: false, type: String })
   async suspenderChave(
     @Param('id') id: string,
     @Req() req: RequestAutenticada,
+    @Query('contaId') contaIdQuery?: string,
   ) {
-    return this.pixKeyService.suspenderChave(
-      id,
-      req.user.contaId as string,
-      req.user.usuarioId,
-    );
+    const contaId = contaIdQuery || req.user.contaId;
+    return this.pixKeyService.suspenderChave(id, contaId, req.user.usuarioId);
   }
 
   @Patch(':id/desbloquear')
@@ -101,15 +111,14 @@ export class PixKeyController {
     name: 'id',
     description: 'ID da chave (chaveId) ou valor da chave',
   })
+  @ApiQuery({ name: 'contaId', required: false, type: String })
   async desbloquearChave(
     @Param('id') id: string,
     @Req() req: RequestAutenticada,
+    @Query('contaId') contaIdQuery?: string,
   ) {
-    return this.pixKeyService.desbloquearChave(
-      id,
-      req.user.contaId as string,
-      req.user.usuarioId,
-    );
+    const contaId = contaIdQuery || req.user.contaId;
+    return this.pixKeyService.desbloquearChave(id, contaId, req.user.usuarioId);
   }
 
   @Get(':valorChave')

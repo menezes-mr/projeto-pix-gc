@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PixKeyService } from './pix-key.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TipoChavePix } from './dto/create-chave-pix.dto';
@@ -264,5 +268,60 @@ describe('PixKeyService', () => {
       BadRequestException,
     );
     expect(prisma.chavePix.update).not.toHaveBeenCalled();
+  });
+
+  it('deve permitir que OPERADOR visualize e gere chaves na conta compartilhada', async () => {
+    prisma.conta.findUnique.mockResolvedValue({
+      contaId: 'c1',
+      status: 'ATIVA',
+      usuarios: [
+        {
+          papel: 'OPERADOR',
+          usuario: {
+            usuarioId: 'u-op',
+            status: 'ATIVO',
+            cpfCnpj: '99988877766',
+            email: 'op@email.com',
+            nomeCompleto: 'Operador Conta',
+          },
+        },
+      ],
+    });
+    const chavesMock = [{ chaveId: 'k1', status: 'ATIVA' }];
+    prisma.chavePix.findMany.mockResolvedValue(chavesMock);
+    prisma.chavePix.count.mockResolvedValue(1);
+    prisma.chavePix.create.mockReturnValue({ chaveId: 'k2', status: 'ATIVA' });
+    prisma.logAtividade.create.mockReturnValue({});
+
+    const chaves = await service.listarChavesDaConta('c1', 'u-op');
+    expect(chaves).toEqual(chavesMock);
+
+    const novaChave = await service.generateRandomKey('c1', 'u-op');
+    expect(novaChave.chaveId).toBe('k2');
+  });
+
+  it('deve permitir que DEPENDENTE visualize chaves mas impedir geracao de chaves', async () => {
+    prisma.conta.findUnique.mockResolvedValue({
+      contaId: 'c1',
+      status: 'ATIVA',
+      usuarios: [
+        {
+          papel: 'DEPENDENTE',
+          usuario: {
+            usuarioId: 'u-dep',
+            status: 'ATIVO',
+          },
+        },
+      ],
+    });
+    const chavesMock = [{ chaveId: 'k1', status: 'ATIVA' }];
+    prisma.chavePix.findMany.mockResolvedValue(chavesMock);
+
+    const chaves = await service.listarChavesDaConta('c1', 'u-dep');
+    expect(chaves).toEqual(chavesMock);
+
+    await expect(service.generateRandomKey('c1', 'u-dep')).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 });

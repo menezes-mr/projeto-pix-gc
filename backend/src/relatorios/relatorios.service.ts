@@ -78,8 +78,13 @@ export class RelatoriosService {
         dataEfetivacao: t.dataEfetivacao,
         dataAgendamento: t.dataAgendamento,
         origemTitular:
-          t.contaOrigem?.usuarios[0]?.usuario?.nomeCompleto || 'Origem Externa',
+          t.contaOrigem?.usuarios.find((u) => u.papel === 'TITULAR')?.usuario
+            ?.nomeCompleto ||
+          t.contaOrigem?.usuarios[0]?.usuario?.nomeCompleto ||
+          'Origem Externa',
         destinoTitular:
+          t.contaDestino?.usuarios.find((u) => u.papel === 'TITULAR')?.usuario
+            ?.nomeCompleto ||
           t.contaDestino?.usuarios[0]?.usuario?.nomeCompleto ||
           'Destino Externo',
         contaOrigemId: t.contaOrigemId,
@@ -101,22 +106,27 @@ export class RelatoriosService {
       },
     });
 
-    return contas.map((conta) => ({
-      contaId: conta.contaId,
-      numeroConta: conta.numeroConta,
-      saldo: Number(conta.saldo),
-      limiteDiarioPix: Number(conta.limiteDiarioPix),
-      status: conta.status,
-      dataCriacao: conta.dataCriacao,
-      titular: conta.usuarios[0]?.usuario
-        ? {
-            nomeCompleto: conta.usuarios[0].usuario.nomeCompleto,
-            cpfCnpj: conta.usuarios[0].usuario.cpfCnpj,
-            email: conta.usuarios[0].usuario.email,
-            usuarioId: conta.usuarios[0].usuario.usuarioId,
-          }
-        : null,
-      totalChaves: conta.chavesPix.length,
-    }));
+    return contas.map((conta) => {
+      const usuarioTitular =
+        conta.usuarios.find((u) => u.papel === 'TITULAR')?.usuario ??
+        conta.usuarios[0]?.usuario;
+      return {
+        contaId: conta.contaId,
+        numeroConta: conta.numeroConta,
+        saldo: Number(conta.saldo),
+        limiteDiarioPix: Number(conta.limiteDiarioPix),
+        status: conta.status,
+        dataCriacao: conta.dataCriacao,
+        titular: usuarioTitular
+          ? {
+              nomeCompleto: usuarioTitular.nomeCompleto,
+              cpfCnpj: usuarioTitular.cpfCnpj,
+              email: usuarioTitular.email,
+              usuarioId: usuarioTitular.usuarioId,
+            }
+          : null,
+        totalChaves: conta.chavesPix.length,
+      };
+    });
   }
 }
