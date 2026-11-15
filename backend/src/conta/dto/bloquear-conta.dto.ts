@@ -1,9 +1,7 @@
-import { IsOptional, IsString, IsNotEmpty } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class BloquearContaDto {
-  @IsNotEmpty({
-    message: 'O ID do usuário/administrador responsável é obrigatório.',
-  })
+  @IsOptional()
   @IsString()
   usuarioId!: string;
 

@@ -24,6 +24,15 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @Post('admin-login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Realizar login administrativo e obter JWT com papel ADMIN',
+  })
+  async adminLogin(@Body() loginDto: LoginDto) {
+    return this.authService.adminLogin(loginDto);
+  }
+
   @Get('minhas-contas')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

@@ -135,6 +135,28 @@ describe('PIX agendado no PostgreSQL', () => {
     expect(await saldos(origem.contaId, destino.contaId)).toEqual([0, 40]);
   });
 
+  it('falha sem movimentar valores se a soma diária superar o limite', async () => {
+    const { origem, destino, pix, dadosPix } = await preparar();
+    await prisma.conta.update({
+      where: { contaId: origem.contaId },
+      data: { limiteDiarioPix: 60 },
+    });
+    await prisma.transacaoPix.create({
+      data: {
+        ...dadosPix,
+        valor: 30,
+        status: 'EFETIVADA',
+        dataEfetivacao: new Date(),
+      },
+    });
+    await service.executar(pix.transacaoId);
+    const atualizado = await prisma.transacaoPix.findUniqueOrThrow({
+      where: { transacaoId: pix.transacaoId },
+    });
+    expect(atualizado.status).toBe('FALHA');
+    expect(await saldos(origem.contaId, destino.contaId)).toEqual([100, 0]);
+  });
+
   it('desfaz o decremento negativo e persiste FALHA sem crédito ou log', async () => {
     const { origem, destino, pix } = await preparar(10);
     const resultado = await service.executar(pix.transacaoId);

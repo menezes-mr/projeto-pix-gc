@@ -237,7 +237,9 @@ export class UsuariosService {
       throw new NotFoundException('Usuário inativo');
     }
 
-    return usuario;
+    const usuarioSemSenha = { ...usuario };
+    delete (usuarioSemSenha as { senha?: string }).senha;
+    return usuarioSemSenha;
   }
 
   async listarLogs(usuarioId: string, page: number, limit: number) {

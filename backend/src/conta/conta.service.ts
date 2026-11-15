@@ -24,6 +24,22 @@ import { DesbloquearContaDto } from './dto/desbloquear-conta.dto';
 export class ContaService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async verificarTitular(contaId: string, usuarioId: string) {
+    const vinculo = await this.prisma.usuarioConta.findFirst({
+      where: {
+        contaId,
+        usuarioId,
+        papel: PapelUsuarioConta.TITULAR,
+        usuario: { status: StatusUsuario.ATIVO },
+      },
+    });
+    if (!vinculo) {
+      throw new ForbiddenException(
+        'Acesso permitido apenas ao titular da conta.',
+      );
+    }
+  }
+
   private gerarNumeroContaUnico(): string {
     const numeroSemDigito = Math.floor(100000 + Math.random() * 900000);
     const digito = Math.floor(Math.random() * 10);

@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard, RequestAutenticada } from '../auth/jwt-auth.guard';
+import { EstornoPixDto } from './dto/estorno-pix.dto';
 import { TransferenciaPixDto } from './dto/transferencia-pix.dto';
 import { PixTransferenciaService } from './pix-transferencia.service';
 
@@ -19,6 +20,14 @@ export class PixTransferenciaController {
   constructor(
     private readonly pixTransferenciaService: PixTransferenciaService,
   ) {}
+
+  @Post('estorno')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Devolver PIX recebido' })
+  estornar(@Req() request: RequestAutenticada, @Body() dto: EstornoPixDto) {
+    return this.pixTransferenciaService.estornar(request.user, dto);
+  }
 
   @Post('transferencia')
   @UseGuards(JwtAuthGuard)

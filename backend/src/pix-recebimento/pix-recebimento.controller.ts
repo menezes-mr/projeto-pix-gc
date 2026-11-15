@@ -1,21 +1,31 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard, RequestAutenticada } from '../auth/jwt-auth.guard';
 import { PixRecebimentoService } from './pix-recebimento.service';
 import { RecebimentoPixDto } from './dto/recebimento-pix.dto';
 
 @ApiTags('Pix Recebimento')
+@ApiBearerAuth()
 @Controller('pix/recebimento')
+@UseGuards(JwtAuthGuard)
 export class PixRecebimentoController {
   constructor(private readonly pixRecebimentoService: PixRecebimentoService) {}
 
   @Post()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Receber PIX externo' })
-  async receber(@Body() dto: RecebimentoPixDto) {
-    return this.pixRecebimentoService.receberPix(
-      dto.chavePixDestino,
-      dto.valor,
-      dto.transacaoExternaId,
-    );
+  @ApiOperation({ summary: 'Simular recebimento PIX em ambiente de testes' })
+  async receber(
+    @Req() req: RequestAutenticada,
+    @Body() dto: RecebimentoPixDto,
+  ) {
+    return this.pixRecebimentoService.receberPix(req.user, dto);
   }
 }

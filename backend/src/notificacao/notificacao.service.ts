@@ -22,7 +22,11 @@ export class NotificacaoService {
       }
 
       for (const usuario of destinatarios) {
-        this.notificarUsuario(usuario, `Você recebeu um PIX de R$ ${valor}.`);
+        const mensagem =
+          transacao.tipoOperacao === 'RECEBIMENTO_SIMULADO'
+            ? `Você recebeu um PIX simulado de R$ ${valor}.`
+            : `Você recebeu um PIX de R$ ${valor}.`;
+        this.notificarUsuario(usuario, mensagem);
       }
     } catch (error) {
       this.logger.error('Falha ao processar notificação de PIX', error);

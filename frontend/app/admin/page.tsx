@@ -76,7 +76,10 @@ interface ContaItem {
 export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(() => {
     if (typeof window !== "undefined") {
-      return sessionStorage.getItem("admin_session") === "true";
+      return (
+        sessionStorage.getItem("admin_session") === "true" &&
+        Boolean(sessionStorage.getItem("admin_token"))
+      );
     }
     return false;
   });
@@ -107,20 +110,37 @@ export default function AdminPage() {
   const [desbloqueando, setDesbloqueando] = useState(false);
   const [feedback, setFeedback] = useState<{ tipo: "success" | "error"; texto: string } | null>(null);
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const getAdminHeaders = () => {
+    const token =
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("admin_token")
+        : null;
+    return {
+      "x-user-role": "ADMIN",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  };
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError("");
 
-    if (username.trim() === "admin" && (password === "admin" || password === "admin123")) {
+    try {
+      const res = await api.post<{ access_token: string }>("/auth/admin-login", {
+        identificador: username.trim(),
+        senha: password,
+      });
+      sessionStorage.setItem("admin_token", res.data.access_token);
       sessionStorage.setItem("admin_session", "true");
       setIsAdmin(true);
-    } else {
+    } catch {
       setLoginError("Credenciais de acesso inválidas.");
     }
   };
 
   const handleAdminLogout = () => {
     sessionStorage.removeItem("admin_session");
+    sessionStorage.removeItem("admin_token");
     setIsAdmin(false);
     setRelatorio(null);
     setContas([]);
@@ -130,7 +150,7 @@ export default function AdminPage() {
     setLoadingRelatorio(true);
     try {
       const res = await api.get("/admin/relatorios/transacoes", {
-        headers: { "x-user-role": "ADMIN" },
+        headers: getAdminHeaders(),
         params: { dataInicio, dataFim },
       });
       setRelatorio(res.data as RelatorioData);
@@ -150,7 +170,7 @@ export default function AdminPage() {
     setLoadingContas(true);
     try {
       const res = await api.get("/admin/relatorios/contas", {
-        headers: { "x-user-role": "ADMIN" },
+        headers: getAdminHeaders(),
       });
       setContas(res.data as ContaItem[]);
     } catch (err: unknown) {
@@ -171,13 +191,14 @@ export default function AdminPage() {
 
     const carregarInicial = async () => {
       try {
+        const headers = getAdminHeaders();
         const [resRelatorio, resContas] = await Promise.all([
           api.get("/admin/relatorios/transacoes", {
-            headers: { "x-user-role": "ADMIN" },
+            headers,
             params: { dataInicio, dataFim },
           }),
           api.get("/admin/relatorios/contas", {
-            headers: { "x-user-role": "ADMIN" },
+            headers,
           }),
         ]);
         if (!cancel) {
@@ -213,7 +234,7 @@ export default function AdminPage() {
           motivo: motivoBloqueio,
         },
         {
-          headers: { "x-user-role": "ADMIN" },
+          headers: getAdminHeaders(),
         }
       );
       setFeedback({
@@ -249,7 +270,7 @@ export default function AdminPage() {
           motivo: "Desbloqueio regular efetuado pela administração",
         },
         {
-          headers: { "x-user-role": "ADMIN" },
+          headers: getAdminHeaders(),
         }
       );
       setFeedback({

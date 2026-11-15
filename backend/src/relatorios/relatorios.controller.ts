@@ -6,7 +6,8 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RelatoriosService } from './relatorios.service';
 import { RelatorioTransacoesQueryDto } from './dto/relatorio-transacoes-query.dto';
 import { AdminRoleGuard } from '../common/guards/roles.guard';
@@ -17,15 +18,11 @@ export class RelatoriosController {
   constructor(private readonly relatoriosService: RelatoriosService) {}
 
   @Get('transacoes')
-  @UseGuards(AdminRoleGuard)
+  @UseGuards(JwtAuthGuard, AdminRoleGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Gerar relatório global de transações (Requer ADMIN)',
-  })
-  @ApiHeader({
-    name: 'x-user-role',
-    required: true,
-    description: 'Papel do usuário (deve ser ADMIN)',
   })
   async relatorioTransacoes(@Query() query: RelatorioTransacoesQueryDto) {
     return this.relatoriosService.gerarRelatorioTransacoes(
@@ -35,16 +32,12 @@ export class RelatoriosController {
   }
 
   @Get('contas')
-  @UseGuards(AdminRoleGuard)
+  @UseGuards(JwtAuthGuard, AdminRoleGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
       'Listar contas bancárias para monitoramento antifraude (Requer ADMIN)',
-  })
-  @ApiHeader({
-    name: 'x-user-role',
-    required: true,
-    description: 'Papel do usuário (deve ser ADMIN)',
   })
   async listarContas() {
     return this.relatoriosService.listarTodasContas();

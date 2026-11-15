@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import { PixTransferFlow } from "@/components/pix/pix-transfer-flow";
-import { PixKeysManager } from "@/components/pix/pix-keys-manager";
+import { PixArea } from "@/components/pix/pix-area";
 import { useAuth } from "@/contexts/auth-context";
 
 export default function PixPage() {
@@ -27,15 +26,7 @@ export default function PixPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <PixTransferFlow key={user?.contaId || "transfer"} />
-        </div>
-
-        <div className="lg:col-span-1">
-          <PixKeysManager key={user?.contaId || "keys"} />
-        </div>
-      </div>
+      <PixArea key={user?.contaId || "pix-area"} />
     </div>
   );
 }

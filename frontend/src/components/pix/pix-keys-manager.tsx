@@ -29,7 +29,7 @@ interface PixKey {
   dataCriacao: string;
 }
 
-export function PixKeysManager() {
+export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }) {
   const { user } = useAuth();
   const contaId = user?.contaId;
   const userRole = user?.role || "TITULAR";
@@ -119,6 +119,7 @@ export function PixKeysManager() {
         message: "Chave PIX removida com sucesso!",
       });
       await loadKeys();
+      onKeysChanged?.();
     } catch (error: unknown) {
       if (axios.isAxiosError<{ message?: string }>(error)) {
         setFeedback({
@@ -156,6 +157,7 @@ export function PixKeysManager() {
             : "Chave PIX desbloqueada com sucesso!",
       });
       await loadKeys();
+      onKeysChanged?.();
     } catch (error: unknown) {
       if (axios.isAxiosError<{ message?: string }>(error)) {
         setFeedback({
@@ -216,6 +218,7 @@ export function PixKeysManager() {
         message: "Chave CPF vinculada com sucesso!",
       });
       await loadKeys();
+      onKeysChanged?.();
     } catch (error: unknown) {
       if (axios.isAxiosError<{ message?: string }>(error)) {
         setFeedback({
@@ -245,6 +248,7 @@ export function PixKeysManager() {
         message: "Chave E-mail vinculada com sucesso!",
       });
       await loadKeys();
+      onKeysChanged?.();
     } catch (error: unknown) {
       if (axios.isAxiosError<{ message?: string }>(error)) {
         setFeedback({
