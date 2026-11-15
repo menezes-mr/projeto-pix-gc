@@ -7,12 +7,18 @@ import { useAuth } from "@/contexts/auth-context";
 
 export function LimitsCard() {
   const { user, updateDailyLimit } = useAuth();
-  const [pixLimit, setPixLimit] = useState<number | null>(null);
+  const [pixLimitState, setPixLimitState] = useState<{
+    contaId?: string | null;
+    value: number;
+  } | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const isTitular = !user?.role || user.role === "TITULAR";
 
-  const currentLimit = pixLimit ?? (user?.dailyLimit ?? 1000);
+  const currentLimit =
+    pixLimitState && pixLimitState.contaId === user?.contaId
+      ? pixLimitState.value
+      : (user?.dailyLimit ?? 1000);
 
   const formattedBalance = (user?.balance ?? 0).toLocaleString("pt-BR", {
     style: "currency",
@@ -72,7 +78,10 @@ export function LimitsCard() {
           value={currentLimit} 
           disabled={!isTitular}
           onChange={(e) => {
-            setPixLimit(Number(e.target.value));
+            setPixLimitState({
+              contaId: user?.contaId,
+              value: Number(e.target.value),
+            });
             setSaved(false);
           }}
           className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"

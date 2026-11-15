@@ -11,6 +11,7 @@ import {
   X,
   Download,
   FileSpreadsheet,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,8 +74,11 @@ function escapeCsvCell(value: unknown): string {
 }
 
 export function CoHoldersCard() {
-  const { user } = useAuth();
+  const { user, refreshAccount, switchAccount } = useAuth();
   const contaId = user?.contaId;
+  const [switchingAccountId, setSwitchingAccountId] = useState<string | null>(
+    null,
+  );
 
   const [cotitulares, setCotitulares] = useState<CotitularItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -165,10 +169,20 @@ export function CoHoldersCard() {
   ).length;
 
   const usuarioLogadoEhTitular =
-    cotitulares.length === 0 ||
+    user?.role === "TITULAR" ||
     cotitulares.some(
       (item) => item.usuarioId === user?.id && item.papel === "TITULAR",
     );
+
+  const handleTrocarConta = async (targetContaId: string) => {
+    if (!targetContaId || targetContaId === contaId) return;
+    setSwitchingAccountId(targetContaId);
+    try {
+      await switchAccount(targetContaId);
+    } finally {
+      setSwitchingAccountId(null);
+    }
+  };
 
   const handleConvidarCotitular = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,6 +204,7 @@ export function CoHoldersCard() {
         text: "Cotitular vinculado à conta com sucesso!",
       });
       await carregarCotitulares();
+      await refreshAccount();
     } catch (err: unknown) {
       if (isAxiosError<{ message?: string | string[] }>(err)) {
         const msg = err.response?.data?.message;
@@ -222,6 +237,7 @@ export function CoHoldersCard() {
         text: "Cotitular desvinculado da conta com sucesso.",
       });
       await carregarCotitulares();
+      await refreshAccount();
     } catch (err: unknown) {
       if (isAxiosError<{ message?: string | string[] }>(err)) {
         const msg = err.response?.data?.message;
@@ -397,9 +413,69 @@ export function CoHoldersCard() {
       </div>
 
       <p className="text-sm text-gray-500">
-        Gerencie os membros vinculados à sua conta conjunta e seus respectivos
-        papéis de acesso.
+        Gerencie os membros vinculados à conta ativa (
+        <strong>C/C {user?.accountNumber || "---"}</strong>) e alterne entre as
+        contas que você participa.
       </p>
+
+      {user?.accounts && user.accounts.length > 1 && (
+        <div className="flex flex-col gap-2 bg-gray-50/80 border border-gray-100 rounded-lg p-3.5">
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+            <ArrowLeftRight className="w-3.5 h-3.5 text-indigo-600" />
+            Contas que Participo ({user.accounts.length})
+          </span>
+          <div className="flex flex-col gap-2">
+            {user.accounts.map((acc) => {
+              const isCurrent = acc.contaId === contaId;
+              return (
+                <div
+                  key={acc.contaId}
+                  className={`flex items-center justify-between gap-2 p-2.5 rounded-lg border text-xs ${
+                    isCurrent
+                      ? "bg-indigo-50/70 border-indigo-200"
+                      : "bg-white border-gray-200"
+                  }`}
+                >
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-gray-900">
+                        Ag {acc.agencia} • C/C {acc.numeroConta}
+                      </span>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          ROLE_STYLES[acc.papel] ||
+                          "bg-gray-100 text-gray-700 border-gray-200"
+                        }`}
+                      >
+                        {acc.papel}
+                      </span>
+                    </div>
+                    <span className="text-gray-500 truncate mt-0.5">
+                      Titular: {acc.titularNome}
+                    </span>
+                  </div>
+                  {isCurrent ? (
+                    <span className="text-[11px] font-bold text-indigo-700 px-2.5 py-1 rounded bg-indigo-100/80">
+                      Conta Ativa
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void handleTrocarConta(acc.contaId)}
+                      disabled={switchingAccountId === acc.contaId}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {switchingAccountId === acc.contaId
+                        ? "Trocando..."
+                        : "Acessar Conta"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {feedback && (
         <div

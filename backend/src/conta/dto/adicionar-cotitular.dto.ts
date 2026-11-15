@@ -9,4 +9,3 @@ export class AdicionarCotitularDto {
   @IsIn(['TITULAR', 'OPERADOR', 'DEPENDENTE'])
   papel!: string;
 }
-
