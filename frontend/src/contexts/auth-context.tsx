@@ -77,8 +77,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("pix_token");
-    const storedUser = localStorage.getItem("pix_user");
+    localStorage.removeItem("pix_token");
+    localStorage.removeItem("pix_user");
+    const storedToken = sessionStorage.getItem("pix_token");
+    const storedUser = sessionStorage.getItem("pix_user");
     
     if (storedToken && storedUser) {
       try {
@@ -91,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (parsed.contaId) {
           api.get(`/contas/${parsed.contaId}`)
             .then((res) => {
+              if (sessionStorage.getItem("pix_token") !== storedToken) return;
               const updated: User = {
                 ...parsed,
                 balance: Number(res.data.saldo),
@@ -99,13 +102,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 dailyLimit: Number(res.data.limiteDiarioPix),
               };
               setUser(updated);
-              localStorage.setItem("pix_user", JSON.stringify(updated));
+              sessionStorage.setItem("pix_user", JSON.stringify(updated));
             })
             .catch(() => {});
         }
       } catch {
-        localStorage.removeItem("pix_user");
-        localStorage.removeItem("pix_token");
+        sessionStorage.removeItem("pix_user");
+        sessionStorage.removeItem("pix_token");
         setTimeout(() => {
           setLoading(false);
         }, 0);
@@ -122,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await api.get(`/contas/${user.contaId}`);
       setUser((prev) => {
-        if (!prev) return null;
+        if (!prev || prev.id !== user.id) return prev;
         const updated: User = {
           ...prev,
           balance: Number(res.data.saldo),
@@ -130,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           accountNumber: res.data.numeroConta,
           dailyLimit: Number(res.data.limiteDiarioPix),
         };
-        localStorage.setItem("pix_user", JSON.stringify(updated));
+        sessionStorage.setItem("pix_user", JSON.stringify(updated));
         return updated;
       });
     } catch {}
@@ -164,7 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         receberEmail: res.data.receberEmail !== undefined ? res.data.receberEmail : prev.receberEmail,
         receberPush: res.data.receberPush !== undefined ? res.data.receberPush : prev.receberPush,
       };
-      localStorage.setItem("pix_user", JSON.stringify(updated));
+      sessionStorage.setItem("pix_user", JSON.stringify(updated));
       return updated;
     });
   };
@@ -181,7 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         dailyLimit: Number(res.data.limiteDiarioPix),
       };
-      localStorage.setItem("pix_user", JSON.stringify(updated));
+      sessionStorage.setItem("pix_user", JSON.stringify(updated));
       return updated;
     });
   };
@@ -209,8 +212,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       receberPush: usuario.receberPush ?? false,
     };
 
-    localStorage.setItem("pix_token", access_token);
-    localStorage.setItem("pix_user", JSON.stringify(mappedUser));
+    sessionStorage.setItem("pix_token", access_token);
+    sessionStorage.setItem("pix_user", JSON.stringify(mappedUser));
     setUser(mappedUser);
   };
 
@@ -238,8 +241,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("pix_user");
-    localStorage.removeItem("pix_token");
+    sessionStorage.removeItem("pix_user");
+    sessionStorage.removeItem("pix_token");
   };
 
   return (
