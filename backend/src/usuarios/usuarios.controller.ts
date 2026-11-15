@@ -8,11 +8,17 @@ import {
   Get,
   Patch,
   Param,
+  Query,
+  Req,
+  UseGuards,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
+import { JwtAuthGuard, RequestAutenticada } from '../auth/jwt-auth.guard';
 
 @ApiTags('Usuários')
 @Controller('usuarios')
@@ -24,6 +30,18 @@ export class UsuariosController {
   @ApiOperation({ summary: 'Cadastrar novo usuário' })
   create(@Body() createUsuarioDto: CreateUsuarioDto) {
     return this.usuariosService.create(createUsuarioDto);
+  }
+
+  @Get('meus-logs')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Listar logs de atividade do usuário autenticado' })
+  listarMeusLogs(
+    @Req() req: RequestAutenticada,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    return this.usuariosService.listarLogs(req.user.usuarioId, page, limit);
   }
 
   @Delete(':id')

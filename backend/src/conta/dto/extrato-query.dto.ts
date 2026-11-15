@@ -12,7 +12,7 @@ export class ExtratoQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  limit: number = 20;
+  limit: number = 10;
 
   @IsOptional()
   @IsDateString()

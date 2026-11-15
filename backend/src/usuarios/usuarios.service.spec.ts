@@ -18,6 +18,8 @@ describe('UsuariosService', () => {
     };
     logAtividade: {
       create: jest.Mock;
+      findMany: jest.Mock;
+      count: jest.Mock;
     };
     $transaction: jest.Mock;
   };
@@ -36,6 +38,8 @@ describe('UsuariosService', () => {
       },
       logAtividade: {
         create: jest.fn(),
+        findMany: jest.fn(),
+        count: jest.fn(),
       },
       $transaction: jest.fn((cb: (tx: typeof prisma) => Promise<unknown>) =>
         cb(prisma),
@@ -128,5 +132,41 @@ describe('UsuariosService', () => {
 
     expect(resultado).toBeDefined();
     expect(resultado.usuarioId).toBe('u-1');
+  });
+
+  it('deve listar logs do usuario ordenados do mais recente e paginados', async () => {
+    const logs = [{ logId: 'l1' }, { logId: 'l2' }];
+    prisma.logAtividade.findMany.mockResolvedValue(logs);
+    prisma.logAtividade.count.mockResolvedValue(25);
+
+    const resultado = await service.listarLogs('u-1', 2, 10);
+
+    expect(prisma.logAtividade.findMany).toHaveBeenCalledWith({
+      where: { usuarioId: 'u-1' },
+      orderBy: { dataHora: 'desc' },
+      skip: 10,
+      take: 10,
+    });
+    expect(resultado.dados).toBe(logs);
+    expect(resultado.meta).toEqual({
+      total: 25,
+      pagina: 2,
+      limite: 10,
+      totalPaginas: 3,
+    });
+  });
+
+  it('deve limitar a pagina a 100 itens e corrigir pagina invalida', async () => {
+    prisma.logAtividade.findMany.mockResolvedValue([]);
+    prisma.logAtividade.count.mockResolvedValue(0);
+
+    await service.listarLogs('u-1', 0, 500);
+
+    expect(prisma.logAtividade.findMany).toHaveBeenCalledWith({
+      where: { usuarioId: 'u-1' },
+      orderBy: { dataHora: 'desc' },
+      skip: 0,
+      take: 100,
+    });
   });
 });

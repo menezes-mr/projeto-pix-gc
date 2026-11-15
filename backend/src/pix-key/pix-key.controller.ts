@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Get,
   Delete,
+  Patch,
   Param,
   UseGuards,
   Req,
@@ -67,6 +68,44 @@ export class PixKeyController {
   })
   async inativarChave(@Param('id') id: string, @Req() req: RequestAutenticada) {
     return this.pixKeyService.inativarChavePix(
+      id,
+      req.user.contaId as string,
+      req.user.usuarioId,
+    );
+  }
+
+  @Patch(':id/suspender')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Suspender chave PIX da conta' })
+  @ApiParam({
+    name: 'id',
+    description: 'ID da chave (chaveId) ou valor da chave',
+  })
+  async suspenderChave(
+    @Param('id') id: string,
+    @Req() req: RequestAutenticada,
+  ) {
+    return this.pixKeyService.suspenderChave(
+      id,
+      req.user.contaId as string,
+      req.user.usuarioId,
+    );
+  }
+
+  @Patch(':id/desbloquear')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Desbloquear chave PIX suspensa' })
+  @ApiParam({
+    name: 'id',
+    description: 'ID da chave (chaveId) ou valor da chave',
+  })
+  async desbloquearChave(
+    @Param('id') id: string,
+    @Req() req: RequestAutenticada,
+  ) {
+    return this.pixKeyService.desbloquearChave(
       id,
       req.user.contaId as string,
       req.user.usuarioId,

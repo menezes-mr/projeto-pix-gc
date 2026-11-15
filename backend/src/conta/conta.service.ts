@@ -358,15 +358,33 @@ export class ContaService {
     const skip = (page - 1) * limit;
     const where: Prisma.TransacaoPixWhereInput = {
       OR: [{ contaOrigemId: contaId }, { contaDestinoId: contaId }],
-      ...(Object.keys(dataFiltro).length > 0
-        ? { AND: [{ dataEfetivacao: dataFiltro }] }
-        : {}),
     };
+    if (Object.keys(dataFiltro).length > 0) {
+      where.AND = [
+        {
+          OR: [{ dataEfetivacao: dataFiltro }, { dataAgendamento: dataFiltro }],
+        },
+      ];
+    }
 
     const [transacoes, total] = await this.prisma.$transaction([
       this.prisma.transacaoPix.findMany({
         where,
-        orderBy: { dataEfetivacao: 'desc' },
+        include: {
+          contaOrigem: {
+            select: { contaId: true, agencia: true, numeroConta: true },
+          },
+          contaDestino: {
+            select: { contaId: true, agencia: true, numeroConta: true },
+          },
+          usuarioSolicitante: {
+            select: { usuarioId: true, nomeCompleto: true },
+          },
+        },
+        orderBy: [
+          { dataEfetivacao: { sort: 'desc', nulls: 'last' } },
+          { dataAgendamento: 'desc' },
+        ],
         skip,
         take: limit,
       }),

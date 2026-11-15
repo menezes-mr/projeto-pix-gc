@@ -176,6 +176,10 @@ export class PixTransferenciaService {
         },
       });
 
+      if (chaveDestino?.status === 'SUSPENSA') {
+        throw new BadRequestException('A chave PIX de destino está suspensa');
+      }
+
       if (
         !chaveDestino ||
         chaveDestino.status !== 'ATIVA' ||

@@ -14,7 +14,7 @@ export function Header() {
   const navItems = [
     { label: "Início", href: "/", icon: Home, noAction: false },
     { label: "PIX", href: "/pix", icon: Zap, noAction: false },
-    { label: "Extrato", href: "#", icon: FileText, noAction: true },
+    { label: "Extrato", href: "/extrato", icon: FileText, noAction: false },
     { label: "Perfil", href: "/perfil", icon: User, noAction: false },
   ];
 

@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { CheckCircle2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 interface Recipient {
@@ -15,29 +14,21 @@ interface Recipient {
 interface StepConfirmProps {
   recipient: Recipient;
   amount: number;
-  onNext: (password: string) => void;
+  scheduledAt: string | null;
+  onNext: () => void;
   loading: boolean;
   error: string;
   onBack: () => void;
 }
 
-export function StepConfirm({ recipient, amount, onNext, loading, error, onBack }: StepConfirmProps) {
-  const [password, setPassword] = useState("");
-  const [localError, setLocalError] = useState("");
-
+export function StepConfirm({ recipient, amount, scheduledAt, onNext, loading, error, onBack }: StepConfirmProps) {
   const formattedAmount = amount.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLocalError("");
-    onNext(password);
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
         <h3 className="text-xl font-bold text-gray-900 text-center">Revisão e Senha</h3>
         <p className="text-sm text-gray-500 text-center mb-4">
@@ -58,26 +49,21 @@ export function StepConfirm({ recipient, amount, onNext, loading, error, onBack 
           <span className="text-sm text-gray-500">Chave PIX</span>
           <span className="text-sm font-semibold text-gray-900">{recipient.chavePix} ({recipient.tipoChave})</span>
         </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-500">Envio</span>
+          <span className="text-sm font-semibold text-gray-900">
+            {scheduledAt ? new Date(scheduledAt).toLocaleString("pt-BR") : "Imediato"}
+          </span>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-gray-700">Senha de Acesso</label>
-        <Input 
-          type="password"
-          placeholder="Digite sua senha cadastrada"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="text-lg"
-          autoFocus
-        />
-        {localError && <span className="text-red-500 text-sm font-medium mt-1">{localError}</span>}
-        {error && <span className="text-red-500 text-sm font-medium mt-1">{error}</span>}
-      </div>
+      {error && <p role="alert" className="text-sm font-medium text-red-600">{error}</p>}
 
       <div className="flex flex-col gap-3 mt-4">
         <Button 
-          type="submit" 
-          disabled={password.length === 0 || loading}
+          type="button"
+          onClick={onNext}
+          disabled={loading}
           className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-lg gap-2"
         >
           <CheckCircle2 className="w-5 h-5" />
@@ -92,6 +78,6 @@ export function StepConfirm({ recipient, amount, onNext, loading, error, onBack 
           Voltar
         </Button>
       </div>
-    </form>
+    </div>
   );
 }
