@@ -4,13 +4,13 @@ import {
   Injectable,
   ForbiddenException,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type { RequestAutenticada } from '../../auth/jwt-auth.guard';
 
 @Injectable()
 export class AdminRoleGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest<Request>();
-    const userRole = request.headers['x-user-role'];
+    const request = context.switchToHttp().getRequest<RequestAutenticada>();
+    const userRole = request.user?.papelSistema;
 
     if (userRole !== 'ADMIN') {
       throw new ForbiddenException(

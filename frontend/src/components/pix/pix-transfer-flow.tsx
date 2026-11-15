@@ -41,7 +41,7 @@ function getCurrentCoordinates(): Promise<{ latitude: number; longitude: number 
   });
 }
 
-export function PixTransferFlow() {
+export function PixTransferFlow({ onCompleted }: { onCompleted?: () => void }) {
   const { refreshAccount, user } = useAuth();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [recipient, setRecipient] = useState<Recipient | null>(null);
@@ -76,6 +76,7 @@ export function PixTransferFlow() {
       });
       setTransaction(response.data);
       await refreshAccount();
+      onCompleted?.();
       setStep(4);
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {

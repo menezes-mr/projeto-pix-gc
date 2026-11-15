@@ -24,7 +24,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://pix_user:pix_password@db:5432/pix_db?schema=public
       - DIRECT_URL=postgresql://pix_user:pix_password@db:5432/pix_db?schema=public
-      - JWT_SECRET=chave-secreta-projeto-pix-dev
+      - JWT_SECRET=${JWT_SECRET:-chave-secreta-projeto-pix-dev}
+      - PIX_SIMULACAO_HABILITADA=${PIX_SIMULACAO_HABILITADA:-false}
     ports:
       - "3333:3333"
     depends_on:

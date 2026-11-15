@@ -72,7 +72,7 @@ export function StepConfirm({ recipient, amount, scheduledAt, onNext, loading, e
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
-        <h3 className="text-xl font-bold text-gray-900 text-center">Revisão e Senha</h3>
+        <h3 className="text-xl font-bold text-gray-900 text-center">Revisão do PIX</h3>
         <p className="text-sm text-gray-500 text-center mb-4">
           Confira os dados antes de confirmar a transferência.
         </p>
