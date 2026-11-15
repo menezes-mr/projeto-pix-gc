@@ -159,9 +159,7 @@ export function AuthContainer() {
             </Button>
             
             <div className="text-center mt-2">
-              <a href="#" className="text-sm text-gray-500 hover:text-black hover:underline transition-colors">
-                Esqueci minha senha
-              </a>
+              <span className="text-sm text-gray-500">Recuperação de senha indisponível neste protótipo.</span>
             </div>
           </div>
         ) : (

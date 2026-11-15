@@ -11,6 +11,7 @@ export function SecuritySettings() {
   const [customEmail, setCustomEmail] = useState<boolean | null>(null);
   const [customPush, setCustomPush] = useState<boolean | null>(null);
   const [savedMessage, setSavedMessage] = useState("");
+  const [error, setError] = useState("");
 
   const sms = customSms ?? (user?.receberSms ?? false);
   const email = customEmail ?? (user?.receberEmail ?? false);
@@ -20,6 +21,8 @@ export function SecuritySettings() {
     key: "receberSms" | "receberEmail" | "receberPush",
     val: boolean,
   ) => {
+    setError("");
+    setSavedMessage("");
     if (key === "receberSms") setCustomSms(val);
     if (key === "receberEmail") setCustomEmail(val);
     if (key === "receberPush") setCustomPush(val);
@@ -28,7 +31,12 @@ export function SecuritySettings() {
       await updateProfile({ [key]: val });
       setSavedMessage("Preferência salva!");
       setTimeout(() => setSavedMessage(""), 2500);
-    } catch {}
+    } catch {
+      if (key === "receberSms") setCustomSms(null);
+      if (key === "receberEmail") setCustomEmail(null);
+      if (key === "receberPush") setCustomPush(null);
+      setError("Não foi possível salvar a preferência. Tente novamente.");
+    }
   };
 
   return (
@@ -47,8 +55,9 @@ export function SecuritySettings() {
       </div>
 
       <p className="text-sm text-gray-500 mb-2">
-        Mantenha as chaves ativas para ser avisado em tempo real ao receber ou enviar transferências PIX.
+        Neste protótipo, os alertas são simulados e registrados no servidor; não são enviados aos dispositivos.
       </p>
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
@@ -58,7 +67,7 @@ export function SecuritySettings() {
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-gray-900">Alertas por SMS</span>
-              <span className="text-xs text-gray-500">Receba código de segurança e confirmações no celular</span>
+              <span className="text-xs text-gray-500">Simular alertas por SMS</span>
             </div>
           </div>
           <Switch checked={sms} onChange={() => handleToggle("receberSms", !sms)} />
@@ -73,7 +82,7 @@ export function SecuritySettings() {
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-gray-900">Alertas por E-mail</span>
-              <span className="text-xs text-gray-500">Relatórios consolidados e comprovantes por correio eletrônico</span>
+              <span className="text-xs text-gray-500">Simular alertas por e-mail</span>
             </div>
           </div>
           <Switch checked={email} onChange={() => handleToggle("receberEmail", !email)} />
@@ -88,7 +97,7 @@ export function SecuritySettings() {
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-gray-900">Notificações Push</span>
-              <span className="text-xs text-gray-500">Avisos instantâneos de movimentações no aplicativo desktop e mobile</span>
+              <span className="text-xs text-gray-500">Simular notificações push</span>
             </div>
           </div>
           <Switch checked={push} onChange={() => handleToggle("receberPush", !push)} />
