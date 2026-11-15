@@ -23,6 +23,7 @@ import { ContaService } from './conta.service';
 import { CreateContaDto } from './dto/create-conta.dto';
 import { UpdateContaDto } from './dto/update-conta.dto';
 import { ExtratoQueryDto } from './dto/extrato-query.dto';
+import { AdicionarCotitularDto } from './dto/adicionar-cotitular.dto';
 import { JwtAuthGuard, RequestAutenticada } from '../auth/jwt-auth.guard';
 import { BloquearContaDto } from './dto/bloquear-conta.dto';
 import { DesbloquearContaDto } from './dto/desbloquear-conta.dto';
@@ -147,5 +148,48 @@ export class ContaController {
   @ApiOperation({ summary: 'Encerrar conta bancária' })
   async encerrarConta(@Param('id') contaId: string) {
     return await this.contaService.encerrarConta(contaId);
+  }
+
+  @Get(':id/titulares')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Listar titulares e cotitulares da conta' })
+  async listarCotitulares(@Param('id') contaId: string) {
+    return await this.contaService.listarCotitulares(contaId);
+  }
+
+  @Post(':id/titulares')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Adicionar cotitular à conta bancária' })
+  async adicionarCotitular(
+    @Param('id') contaId: string,
+    @Body() dto: AdicionarCotitularDto,
+    @Req() req: RequestAutenticada,
+  ) {
+    return await this.contaService.adicionarCotitular(
+      contaId,
+      req.user.usuarioId,
+      dto,
+    );
+  }
+
+  @Delete(':id/titulares/:usuarioId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Remover cotitular da conta bancária' })
+  async removerCotitular(
+    @Param('id') contaId: string,
+    @Param('usuarioId') usuarioId: string,
+    @Req() req: RequestAutenticada,
+  ) {
+    return await this.contaService.removerCotitular(
+      contaId,
+      req.user.usuarioId,
+      usuarioId,
+    );
   }
 }
