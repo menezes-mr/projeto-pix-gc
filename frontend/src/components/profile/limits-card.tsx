@@ -10,6 +10,7 @@ export function LimitsCard() {
   const [pixLimit, setPixLimit] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const isTitular = !user?.role || user.role === "TITULAR";
 
   const currentLimit = pixLimit ?? (user?.dailyLimit ?? 1000);
 
@@ -69,17 +70,23 @@ export function LimitsCard() {
           max="5000" 
           step="100"
           value={currentLimit} 
+          disabled={!isTitular}
           onChange={(e) => {
             setPixLimit(Number(e.target.value));
             setSaved(false);
           }}
-          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
         />
         
         <div className="flex items-center justify-between text-xs text-gray-400 font-medium">
           <span>R$ 0</span>
           <span>R$ 5.000,00</span>
         </div>
+        {!isTitular && (
+          <span className="text-xs text-gray-500">
+            Apenas usuários com papel TITULAR podem alterar o limite desta conta.
+          </span>
+        )}
       </div>
 
       {saved && (
@@ -93,7 +100,7 @@ export function LimitsCard() {
         <Button 
           type="button"
           onClick={handleSave} 
-          disabled={saving || currentLimit === user?.dailyLimit}
+          disabled={!isTitular || saving || currentLimit === user?.dailyLimit}
           className="bg-indigo-600 hover:bg-indigo-700 gap-2"
         >
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
