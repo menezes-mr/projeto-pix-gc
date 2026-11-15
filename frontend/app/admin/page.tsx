@@ -85,11 +85,13 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState("");
   const [activeTab, setActiveTab] = useState<"relatorios" | "antifraude">("relatorios");
 
-  const [dataInicio, setDataInicio] = useState(
-    () => `${new Date().getFullYear()}-01-01`,
-  );
-  const [dataFim, setDataFim] = useState(
-    () => `${new Date().getFullYear()}-12-31`,
+  const [dataInicio, setDataInicio] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 90);
+    return d.toISOString().slice(0, 10);
+  });
+  const [dataFim, setDataFim] = useState(() =>
+    new Date().toISOString().slice(0, 10),
   );
   const [relatorio, setRelatorio] = useState<RelatorioData | null>(null);
   const [loadingRelatorio, setLoadingRelatorio] = useState(false);
