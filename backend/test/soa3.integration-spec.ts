@@ -249,6 +249,77 @@ describe('SOA 3 no PostgreSQL', () => {
         contaId: d.destino.contaId,
       });
       await request(app.getHttpServer())
+        .get(`/usuarios/${d.a.usuarioId}`)
+        .expect(401);
+      await request(app.getHttpServer())
+        .get(`/contas/${d.origem.contaId}/saldo`)
+        .set('x-usuario-id', d.a.usuarioId)
+        .expect(401);
+      await request(app.getHttpServer())
+        .patch(`/usuarios/${d.a.usuarioId}`)
+        .auth(tokenB, { type: 'bearer' })
+        .send({ senha: 'SenhaNova123!' })
+        .expect(403);
+      await request(app.getHttpServer())
+        .get(`/contas/${d.origem.contaId}`)
+        .auth(tokenB, { type: 'bearer' })
+        .expect(403);
+      await request(app.getHttpServer())
+        .patch(`/contas/${d.origem.contaId}`)
+        .auth(tokenB, { type: 'bearer' })
+        .send({ limiteDiarioPix: 9999 })
+        .expect(403);
+      await request(app.getHttpServer())
+        .delete(`/contas/${d.origem.contaId}`)
+        .auth(tokenB, { type: 'bearer' })
+        .expect(403);
+      const proprioUsuario = await request(app.getHttpServer())
+        .get(`/usuarios/${d.a.usuarioId}`)
+        .auth(tokenA, { type: 'bearer' })
+        .expect(200);
+      expect(proprioUsuario.body).not.toHaveProperty('senha');
+      await request(app.getHttpServer())
+        .patch(`/usuarios/${d.a.usuarioId}`)
+        .auth(tokenA, { type: 'bearer' })
+        .send({ nomeCompleto: 'Nome atualizado' })
+        .expect(200);
+      await request(app.getHttpServer())
+        .get(`/contas/${d.origem.contaId}`)
+        .auth(tokenA, { type: 'bearer' })
+        .expect(200);
+      await request(app.getHttpServer())
+        .patch(`/contas/${d.origem.contaId}`)
+        .auth(tokenA, { type: 'bearer' })
+        .send({ limiteDiarioPix: 1000 })
+        .expect(200);
+      const relatorio =
+        '/admin/relatorios/transacoes?dataInicio=2020-01-01&dataFim=2030-01-01';
+      await request(app.getHttpServer())
+        .get(relatorio)
+        .set('x-user-role', 'ADMIN')
+        .expect(401);
+      await request(app.getHttpServer())
+        .get(relatorio)
+        .auth(tokenA, { type: 'bearer' })
+        .set('x-user-role', 'ADMIN')
+        .expect(403);
+      await prisma.usuario.update({
+        where: { usuarioId: d.a.usuarioId },
+        data: { papelSistema: 'ADMIN' },
+      });
+      await request(app.getHttpServer())
+        .get(relatorio)
+        .auth(tokenA, { type: 'bearer' })
+        .expect(200);
+      await prisma.usuario.update({
+        where: { usuarioId: d.a.usuarioId },
+        data: { papelSistema: 'USUARIO' },
+      });
+      await request(app.getHttpServer())
+        .get(relatorio)
+        .auth(tokenA, { type: 'bearer' })
+        .expect(403);
+      await request(app.getHttpServer())
         .post('/pix/estorno')
         .send({ transacaoIdOriginal: d.pix.transacaoId })
         .expect(401);

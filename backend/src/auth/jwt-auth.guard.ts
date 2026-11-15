@@ -9,6 +9,7 @@ export interface RequestAutenticada extends Request {
   user: {
     usuarioId: string;
     email: string;
+    papelSistema?: string;
     contaId?: string;
     contaOrigemId: string;
   };
