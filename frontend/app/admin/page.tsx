@@ -21,6 +21,7 @@ import {
   Users,
   Ban,
   Loader2,
+  Download,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import axios from "axios";
@@ -279,6 +280,85 @@ export default function AdminPage() {
   const transacoesPendentes = relatorio?.detalhamento.find((d) => d.status === "PENDENTE")?.quantidade || 0;
   const ticketMedio = transacoesEfetivadas > 0 ? (relatorio?.volumeTotalEfetivado || 0) / transacoesEfetivadas : 0;
 
+  const handleExportarRelatorioGlobalCsv = () => {
+    if (!relatorio) return;
+
+    const escapeCsv = (value: unknown) => {
+      const str = value === null || value === undefined ? "" : String(value);
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+
+    const linhas: string[][] = [
+      ["RELATORIO CONSOLIDADO GLOBAL - ADMINISTRACAO PIX GC"],
+      ["Periodo Inicio", relatorio.periodo.dataInicio],
+      ["Periodo Fim", relatorio.periodo.dataFim],
+      ["Volume Total Efetivado (R$)", Number(relatorio.volumeTotalEfetivado).toFixed(2)],
+      ["Total de Transacoes", String(totalTransacoesGeral)],
+      ["Transacoes Efetivadas", String(transacoesEfetivadas)],
+      ["Transacoes Pendentes", String(transacoesPendentes)],
+      ["Ticket Medio (R$)", Number(ticketMedio).toFixed(2)],
+      [],
+      ["DETALHAMENTO POR STATUS E TIPO DE OPERACAO"],
+      ["Status", "Tipo de Operacao", "Quantidade", "Valor Total (R$)"],
+      ...relatorio.detalhamento.map((item) => [
+        item.status,
+        item.tipoOperacao,
+        String(item.quantidade),
+        Number(item.valorTotal).toFixed(2),
+      ]),
+      [],
+      ["TRANSACOES REGISTRADAS NO PERIODO"],
+      [
+        "ID Transacao",
+        "Data/Hora",
+        "Origem",
+        "Destino",
+        "Chave PIX Utilizada",
+        "Tipo Operacao",
+        "Status",
+        "Valor (R$)",
+      ],
+      ...relatorio.transacoes.map((t) => {
+        const dataRef = t.dataEfetivacao || t.dataAgendamento || "";
+        const dataFormatada = dataRef ? new Date(dataRef).toLocaleString("pt-BR") : "";
+        return [
+          t.transacaoId,
+          dataFormatada,
+          t.origemTitular,
+          t.destinoTitular,
+          t.chavePixUtilizada || "",
+          t.tipoOperacao,
+          t.status,
+          Number(t.valor).toFixed(2),
+        ];
+      }),
+    ];
+
+    const conteudoCsv =
+      "\uFEFF" +
+      linhas.map((linha) => linha.map(escapeCsv).join(";")).join("\r\n");
+
+    const blob = new Blob([conteudoCsv], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute(
+      "download",
+      `relatorio_global_admin_${dataInicio}_a_${dataFim}.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setFeedback({
+      tipo: "success",
+      texto: "Relatório consolidado global exportado em CSV com sucesso.",
+    });
+  };
+
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4">
@@ -483,6 +563,15 @@ export default function AdminPage() {
                 >
                   {loadingRelatorio ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                   Atualizar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportarRelatorioGlobalCsv}
+                  disabled={loadingRelatorio || !relatorio}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Exportar Relatório (CSV)
                 </button>
               </div>
             </div>
