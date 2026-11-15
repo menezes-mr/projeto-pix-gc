@@ -8,9 +8,12 @@ export class HistoricoPixService {
   async registrarTransacao(
     dados: CriarHistoricoDto,
     tx: Prisma.TransactionClient,
+    instanteEfetivacao?: Date,
   ) {
     const dataEfetivacao =
-      dados.status === StatusTransacao.EFETIVADA ? new Date() : null;
+      dados.status === StatusTransacao.EFETIVADA
+        ? (instanteEfetivacao ?? new Date())
+        : null;
 
     return await tx.transacaoPix.create({
       data: {

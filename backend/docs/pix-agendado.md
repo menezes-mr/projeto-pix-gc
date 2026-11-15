@@ -33,6 +33,10 @@ um usuário identificado; não há atribuição automática a outro titular.
 - Todos os usuários vinculados às duas contas devem estar `ATIVO`. Conta sem
   usuário vinculado também falha. O solicitante deve continuar titular da origem.
 - Somente transferências de saída com valor positivo podem ser executadas.
+- O limite diário considera a soma dos PIX de saída efetivados no dia civil de
+  Brasília (`America/Sao_Paulo`), incluindo a nova transferência. Agendamentos
+  são verificados na execução; pendentes, cancelados e devoluções não consomem
+  limite, e uma devolução não reduz a soma já efetivada.
 - Débito atômico, crédito, status `EFETIVADA`, `dataEfetivacao` e log
   `EXECUCAO_PIX_AGENDADO` são gravados na mesma transação.
 - Falha de regra de negócio desfaz a movimentação e grava `FALHA`, sem data de

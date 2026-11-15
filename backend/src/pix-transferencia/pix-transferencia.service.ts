@@ -11,6 +11,7 @@ import { StatusTransacao } from '../common/enums/status.enum';
 import { TipoOperacao } from '../common/enums/tipo-operacao.enum';
 import { PrismaService } from '../prisma/prisma.service';
 import { HistoricoPixService } from '../shared/historico-pix/historico-pix.service';
+import { limiteDiarioExcedido } from '../shared/historico-pix/limite-diario-pix';
 import { EstornoPixDto } from './dto/estorno-pix.dto';
 import { TransferenciaPixDto } from './dto/transferencia-pix.dto';
 
@@ -159,7 +160,7 @@ export class PixTransferenciaService {
         );
       }
 
-      if (valor.greaterThan(contaOrigem.limiteDiarioPix)) {
+      if (dataAgendamento && valor.greaterThan(contaOrigem.limiteDiarioPix)) {
         throw new BadRequestException(
           'O valor ultrapassa o limite diário PIX da conta',
         );
@@ -197,7 +198,34 @@ export class PixTransferenciaService {
         );
       }
 
+      let instanteEfetivacao: Date | undefined;
       if (!dataAgendamento) {
+        // A mesma ordem de bloqueio é usada pelo executor dos agendamentos.
+        await tx.$queryRaw`
+          SELECT "contaId" FROM "Conta"
+          WHERE "contaId" IN (${contaOrigemId}, ${chaveDestino.contaId})
+          ORDER BY "contaId" FOR UPDATE
+        `;
+        const origemBloqueada = await tx.conta.findUniqueOrThrow({
+          where: { contaId: contaOrigemId },
+        });
+        if (origemBloqueada.status !== 'ATIVA') {
+          throw new ForbiddenException('A conta de origem precisa estar ativa');
+        }
+        instanteEfetivacao = new Date();
+        if (
+          await limiteDiarioExcedido(
+            tx,
+            contaOrigemId,
+            valor,
+            origemBloqueada.limiteDiarioPix,
+            instanteEfetivacao,
+          )
+        ) {
+          throw new BadRequestException(
+            'O valor ultrapassa o limite diário PIX da conta',
+          );
+        }
         const contaOrigemAtualizada = await tx.conta.update({
           where: { contaId: contaOrigemId },
           data: {
@@ -231,6 +259,7 @@ export class PixTransferenciaService {
           usuarioSolicitanteId: usuarioId,
         },
         tx,
+        instanteEfetivacao,
       );
 
       await tx.logAtividade.create({

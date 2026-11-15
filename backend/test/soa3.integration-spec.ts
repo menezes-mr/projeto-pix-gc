@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -10,8 +11,10 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { HistoricoPixService } from '../src/shared/historico-pix/historico-pix.service';
+import { limiteDiarioExcedido } from '../src/shared/historico-pix/limite-diario-pix';
 import { PixTransferenciaService } from '../src/pix-transferencia/pix-transferencia.service';
 import { PixRecebimentoService } from '../src/pix-recebimento/pix-recebimento.service';
+import { PixAgendadoService } from '../src/pix-agendado/pix-agendado.service';
 
 const databaseUrl = process.env.PIX_TEST_DATABASE_URL;
 if (!databaseUrl)
@@ -108,6 +111,88 @@ describe('SOA 3 no PostgreSQL', () => {
       await prisma.conta.findUniqueOrThrow({ where: { contaId: id } })
     ).saldo.toNumber();
   }
+
+  it('aplica o limite diário entre transferências simultâneas da mesma conta', async () => {
+    const d = await preparar();
+    await prisma.conta.update({
+      where: { contaId: d.origem.contaId },
+      data: { limiteDiarioPix: 60 },
+    });
+    const contexto = {
+      contaOrigemId: d.origem.contaId,
+      usuarioId: d.a.usuarioId,
+    };
+    const dto = { chavePixDestino: d.chave.valorChave, valor: 20 };
+    const resultados = await Promise.allSettled([
+      service.transferir(contexto, dto),
+      concorrente.transferir(contexto, dto),
+    ]);
+    expect(resultados.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect(resultados.filter((r) => r.status === 'rejected')).toHaveLength(1);
+    expect(await saldo(d.origem.contaId)).toBe(54.5);
+    expect(await saldo(d.destino.contaId)).toBe(45.5);
+  });
+
+  it('compartilha o limite entre uma transferência imediata e um agendamento concorrente', async () => {
+    const d = await preparar();
+    await prisma.conta.update({
+      where: { contaId: d.origem.contaId },
+      data: { limiteDiarioPix: 60 },
+    });
+    const pendente = await prisma.transacaoPix.create({
+      data: {
+        contaOrigemId: d.origem.contaId,
+        contaDestinoId: d.destino.contaId,
+        usuarioSolicitanteId: d.a.usuarioId,
+        valor: 20,
+        status: 'PENDENTE',
+        tipoOperacao: 'TRANSFERENCIA_SAIDA',
+        dataAgendamento: new Date(Date.now() - 1000),
+      },
+    });
+    const executor = new PixAgendadoService(outroPrisma, eventos);
+    await Promise.allSettled([
+      service.transferir(
+        { contaOrigemId: d.origem.contaId, usuarioId: d.a.usuarioId },
+        { chavePixDestino: d.chave.valorChave, valor: 20 },
+      ),
+      executor.executar(pendente.transacaoId),
+    ]);
+    expect(await saldo(d.origem.contaId)).toBe(54.5);
+    expect(await saldo(d.destino.contaId)).toBe(45.5);
+    expect(
+      await prisma.transacaoPix.count({
+        where: { contaOrigemId: d.origem.contaId, status: 'EFETIVADA' },
+      }),
+    ).toBe(2);
+  });
+
+  it('reinicia o limite à meia-noite de Brasília', async () => {
+    const d = await preparar();
+    await prisma.transacaoPix.create({
+      data: {
+        contaOrigemId: d.origem.contaId,
+        contaDestinoId: d.destino.contaId,
+        valor: 9,
+        status: 'EFETIVADA',
+        tipoOperacao: 'TRANSFERENCIA_SAIDA',
+        dataEfetivacao: new Date('2025-01-02T02:30:00.000Z'),
+      },
+    });
+    const consultar = (agora: string) =>
+      prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL TIME ZONE 'Pacific/Auckland'`;
+        return limiteDiarioExcedido(
+          tx,
+          d.origem.contaId,
+          new Prisma.Decimal(2),
+          new Prisma.Decimal(10),
+          new Date(agora),
+        );
+      });
+    await expect(consultar('2025-01-02T02:59:59.000Z')).resolves.toBe(true);
+    await expect(consultar('2025-01-02T03:00:00.000Z')).resolves.toBe(false);
+  });
 
   it('transfere e permite uma única devolução em chamadas simultâneas', async () => {
     const d = await preparar();
