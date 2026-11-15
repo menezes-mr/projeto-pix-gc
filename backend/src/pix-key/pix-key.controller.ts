@@ -37,7 +37,7 @@ export class PixKeyController {
     @Req() req: RequestAutenticada,
     @Query('contaId') contaIdQuery?: string,
   ) {
-    const contaId = contaIdQuery || req.user.contaId;
+    const contaId = contaIdQuery ?? req.user.contaId ?? '';
     return this.pixKeyService.listarChavesDaConta(contaId, req.user.usuarioId);
   }
 
@@ -50,7 +50,7 @@ export class PixKeyController {
     @Req() req: RequestAutenticada,
     @Query('contaId') contaIdQuery?: string,
   ) {
-    const contaId = contaIdQuery || req.user.contaId;
+    const contaId = contaIdQuery ?? req.user.contaId ?? '';
     return this.pixKeyService.generateRandomKey(contaId, req.user.usuarioId);
   }
 
@@ -81,7 +81,7 @@ export class PixKeyController {
     @Req() req: RequestAutenticada,
     @Query('contaId') contaIdQuery?: string,
   ) {
-    const contaId = contaIdQuery || req.user.contaId;
+    const contaId = contaIdQuery ?? req.user.contaId ?? '';
     return this.pixKeyService.inativarChavePix(id, contaId, req.user.usuarioId);
   }
 
@@ -99,7 +99,7 @@ export class PixKeyController {
     @Req() req: RequestAutenticada,
     @Query('contaId') contaIdQuery?: string,
   ) {
-    const contaId = contaIdQuery || req.user.contaId;
+    const contaId = contaIdQuery ?? req.user.contaId ?? '';
     return this.pixKeyService.suspenderChave(id, contaId, req.user.usuarioId);
   }
 
@@ -117,7 +117,7 @@ export class PixKeyController {
     @Req() req: RequestAutenticada,
     @Query('contaId') contaIdQuery?: string,
   ) {
-    const contaId = contaIdQuery || req.user.contaId;
+    const contaId = contaIdQuery ?? req.user.contaId ?? '';
     return this.pixKeyService.desbloquearChave(id, contaId, req.user.usuarioId);
   }
 
