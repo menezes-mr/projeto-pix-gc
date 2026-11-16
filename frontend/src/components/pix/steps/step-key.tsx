@@ -29,7 +29,13 @@ interface StepKeyProps {
 
 export function StepKey({ onNext }: StepKeyProps) {
   const { user } = useAuth();
-  const [pixKey, setPixKey] = useState("");
+  const [pixKey, setPixKey] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("chave") || "";
+    }
+    return "";
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [contacts, setContacts] = useState<ContatoPix[]>([]);
