@@ -40,7 +40,7 @@ export function PixArea() {
           {aba === "transferir" ? (
             <PixTransferFlow onCompleted={atualizar} />
           ) : (
-            <PixCobranca key={revisaoChaves} onCompleted={atualizar} />
+            <PixCobranca key={revisaoChaves} />
           )}
         </div>
         <PixKeysManager
