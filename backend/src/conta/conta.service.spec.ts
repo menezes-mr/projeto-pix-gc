@@ -44,7 +44,10 @@ describe('ContaService extrato', () => {
     expect(prisma.transacaoPix.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          OR: [{ contaOrigemId: 'conta-1' }, { contaDestinoId: 'conta-1' }],
+          OR: [
+            { contaOrigemId: 'conta-1' },
+            { contaDestinoId: 'conta-1', status: 'EFETIVADA' },
+          ],
           AND: [
             {
               OR: [
@@ -56,10 +59,32 @@ describe('ContaService extrato', () => {
         },
         include: {
           contaOrigem: {
-            select: { contaId: true, agencia: true, numeroConta: true },
+            select: {
+              contaId: true,
+              agencia: true,
+              numeroConta: true,
+              usuarios: {
+                where: { papel: 'TITULAR' },
+                take: 1,
+                select: {
+                  usuario: { select: { nomeCompleto: true } },
+                },
+              },
+            },
           },
           contaDestino: {
-            select: { contaId: true, agencia: true, numeroConta: true },
+            select: {
+              contaId: true,
+              agencia: true,
+              numeroConta: true,
+              usuarios: {
+                where: { papel: 'TITULAR' },
+                take: 1,
+                select: {
+                  usuario: { select: { nomeCompleto: true } },
+                },
+              },
+            },
           },
           usuarioSolicitante: {
             select: { usuarioId: true, nomeCompleto: true },

@@ -209,24 +209,44 @@ export function RecentTransactions({
           {recentList.map((tx) => {
             const isIncoming =
               tx.contaDestinoId === contaId && tx.contaOrigemId !== contaId;
+            const isPending = tx.status === "PENDENTE";
+            const isCanceledOrFailed =
+              tx.status === "CANCELADA" || tx.status === "FALHA";
             const isEstorno = tx.tipoOperacao === "ESTORNO";
             const title = isEstorno
               ? isIncoming
                 ? "Estorno PIX recebido"
                 : "Devolução PIX enviada"
-              : isIncoming
-                ? "PIX recebido"
-                : tx.status === "PENDENTE"
-                  ? "PIX agendado"
-                  : "PIX enviado";
+              : isPending
+                ? "PIX agendado"
+                : tx.status === "CANCELADA"
+                  ? "Agendamento PIX cancelado"
+                  : tx.status === "FALHA"
+                    ? "Agendamento PIX não efetivado"
+                    : isIncoming
+                      ? "PIX recebido"
+                      : "PIX enviado";
 
-            const subtitle = tx.chavePixUtilizada
-              ? `Chave: ${tx.chavePixUtilizada}`
-              : isIncoming && tx.contaOrigem?.numeroConta
-                ? `Origem: C/C ${tx.contaOrigem.numeroConta}`
-                : tx.contaDestino?.numeroConta
-                  ? `Destino: C/C ${tx.contaDestino.numeroConta}`
-                  : "Transferência entre contas";
+            const originHolder =
+              tx.contaOrigem?.usuarios?.[0]?.usuario?.nomeCompleto;
+            const destHolder =
+              tx.contaDestino?.usuarios?.[0]?.usuario?.nomeCompleto;
+
+            const subtitle = isIncoming
+              ? originHolder
+                ? `De: ${originHolder} (${tx.contaOrigem?.numeroConta ? `C/C ${tx.contaOrigem.numeroConta}` : "Conta"})`
+                : tx.contaOrigem?.numeroConta
+                  ? `Origem: C/C ${tx.contaOrigem.numeroConta}`
+                  : tx.chavePixUtilizada
+                    ? `Chave: ${tx.chavePixUtilizada}`
+                    : "Transferência recebida"
+              : destHolder
+                ? `Para: ${destHolder}${tx.chavePixUtilizada ? ` • Chave: ${tx.chavePixUtilizada}` : ""}`
+                : tx.chavePixUtilizada
+                  ? `Chave: ${tx.chavePixUtilizada}`
+                  : tx.contaDestino?.numeroConta
+                    ? `Destino: C/C ${tx.contaDestino.numeroConta}`
+                    : "Transferência enviada";
 
             const dateRef = tx.dataEfetivacao || tx.dataAgendamento;
 
@@ -238,17 +258,19 @@ export function RecentTransactions({
                 <div className="flex items-center gap-3 min-w-0">
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                      isIncoming
-                        ? "bg-emerald-50 text-emerald-600"
-                        : tx.status === "PENDENTE"
-                          ? "bg-amber-50 text-amber-600"
-                          : "bg-gray-100 text-gray-700"
+                      isPending
+                        ? "bg-amber-50 text-amber-600"
+                        : isCanceledOrFailed
+                          ? "bg-rose-50 text-rose-500"
+                          : isIncoming
+                            ? "bg-emerald-50 text-emerald-600"
+                            : "bg-gray-100 text-gray-700"
                     }`}
                   >
-                    {isIncoming ? (
-                      <ArrowDownLeft className="w-5 h-5" />
-                    ) : tx.status === "PENDENTE" ? (
+                    {isPending ? (
                       <CalendarClock className="w-5 h-5" />
+                    ) : isIncoming ? (
+                      <ArrowDownLeft className="w-5 h-5" />
                     ) : (
                       <ArrowUpRight className="w-5 h-5" />
                     )}
@@ -269,7 +291,10 @@ export function RecentTransactions({
                       </span>
                     </div>
                     <span className="text-xs text-gray-500 truncate">
-                      {subtitle} • {formatDateTime(dateRef)}
+                      {subtitle} •{" "}
+                      {isPending
+                        ? `Programado: ${formatDateTime(dateRef)}`
+                        : formatDateTime(dateRef)}
                     </span>
                   </div>
                 </div>
@@ -277,10 +302,20 @@ export function RecentTransactions({
                 <div className="flex items-center gap-3 shrink-0">
                   <span
                     className={`text-sm font-bold ${
-                      isIncoming ? "text-emerald-600" : "text-gray-900"
+                      isPending
+                        ? "text-amber-700"
+                        : isCanceledOrFailed
+                          ? "text-gray-400 line-through"
+                          : isIncoming
+                            ? "text-emerald-600"
+                            : "text-gray-900"
                     }`}
                   >
-                    {isIncoming ? "+" : "-"} {formatCurrency(tx.valor)}
+                    {isPending
+                      ? `Agendado: ${formatCurrency(tx.valor)}`
+                      : isCanceledOrFailed
+                        ? formatCurrency(tx.valor)
+                        : `${isIncoming ? "+" : "-"} ${formatCurrency(tx.valor)}`}
                   </span>
                   <button
                     type="button"

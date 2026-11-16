@@ -431,12 +431,31 @@ export default function ExtratoPage() {
           <div className="divide-y divide-gray-200">
             {transactions.map((transaction) => {
               const isOutgoing = transaction.contaOrigemId === accountId;
+              const isPending = transaction.status === "PENDENTE";
+              const isCanceledOrFailed =
+                transaction.status === "CANCELADA" ||
+                transaction.status === "FALHA";
               const transactionDate =
                 transaction.dataEfetivacao || transaction.dataAgendamento;
               const amount = Number(transaction.valor).toLocaleString("pt-BR", {
                 style: "currency",
                 currency: "BRL",
               });
+
+              const txTitle =
+                transaction.tipoOperacao === "ESTORNO"
+                  ? isOutgoing
+                    ? "Devolução Pix enviada"
+                    : "Estorno Pix recebido"
+                  : isPending
+                    ? "Pix agendado"
+                    : transaction.status === "CANCELADA"
+                      ? "Agendamento Pix cancelado"
+                      : transaction.status === "FALHA"
+                        ? "Agendamento Pix não efetivado"
+                        : isOutgoing
+                          ? "Pix enviado"
+                          : "Pix recebido";
 
               return (
                 <article
@@ -450,7 +469,13 @@ export default function ExtratoPage() {
                     aria-label={`Abrir comprovante da transação ${transaction.transacaoId}`}
                   >
                     <span
-                      className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${isOutgoing ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}
+                      className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                        isPending
+                          ? "bg-amber-50 text-amber-700"
+                          : isOutgoing
+                            ? "bg-rose-50 text-rose-700"
+                            : "bg-emerald-50 text-emerald-700"
+                      }`}
                     >
                       {isOutgoing ? (
                         <ArrowUpRight className="h-4 w-4" />
@@ -461,7 +486,7 @@ export default function ExtratoPage() {
                     <span className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-gray-900">
-                          {isOutgoing ? "Pix enviado" : "Pix recebido"}
+                          {txTitle}
                         </span>
                         <span
                           className={`rounded px-2 py-0.5 text-xs font-semibold ${statusStyles[transaction.status] || "bg-gray-100 text-gray-700"}`}
@@ -474,20 +499,32 @@ export default function ExtratoPage() {
                           ? new Date(transactionDate).toLocaleString("pt-BR")
                           : "Data não disponível"}
                         {transaction.dataAgendamento &&
-                          !transaction.dataEfetivacao && " · Agendamento"}
+                          !transaction.dataEfetivacao &&
+                          " · Débito programado"}
                       </span>
                       <span className="mt-1 block truncate text-xs text-gray-400">
                         ID {transaction.transacaoId}
                       </span>
                     </span>
                     <span
-                      className={`shrink-0 font-semibold tabular-nums ${isOutgoing ? "text-gray-900" : "text-emerald-700"}`}
+                      className={`shrink-0 font-semibold tabular-nums ${
+                        isPending
+                          ? "text-amber-700"
+                          : isCanceledOrFailed
+                            ? "text-gray-400 line-through"
+                            : isOutgoing
+                              ? "text-gray-900"
+                              : "text-emerald-700"
+                      }`}
                     >
-                      {isOutgoing ? "−" : "+"}
-                      {amount}
+                      {isPending
+                        ? `Agendado: ${amount}`
+                        : isCanceledOrFailed
+                          ? amount
+                          : `${isOutgoing ? "−" : "+"}${amount}`}
                     </span>
                   </button>
-                  {transaction.status === "PENDENTE" && (
+                  {isPending && isOutgoing && user?.role !== "DEPENDENTE" && (
                     <button
                       type="button"
                       onClick={() => void cancelScheduled(transaction.transacaoId)}
