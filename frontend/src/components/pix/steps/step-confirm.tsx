@@ -1,8 +1,10 @@
 "use client";
 
-import React from "react";
-import { CheckCircle2 } from "lucide-react";
+import React, { useState } from "react";
+import { CheckCircle2, UserPlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import axios from "axios";
+import { api } from "@/lib/api";
 
 interface Recipient {
   chavePix: string;
@@ -22,10 +24,50 @@ interface StepConfirmProps {
 }
 
 export function StepConfirm({ recipient, amount, scheduledAt, onNext, loading, error, onBack }: StepConfirmProps) {
+  const [savingContact, setSavingContact] = useState(false);
+  const [contactSaved, setContactSaved] = useState(false);
+  const [contactFeedback, setContactFeedback] = useState<{
+    type: "idle" | "success" | "error";
+    message: string;
+  }>({ type: "idle", message: "" });
+
   const formattedAmount = amount.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
+
+  const handleSaveContact = async () => {
+    if (savingContact || contactSaved) return;
+    setSavingContact(true);
+    setContactFeedback({ type: "idle", message: "" });
+
+    try {
+      await api.post("/contatos", {
+        nomeContato: recipient.nomeCompleto,
+        chavePix: recipient.chavePix,
+        tipoChave: recipient.tipoChave,
+      });
+      setContactSaved(true);
+      setContactFeedback({
+        type: "success",
+        message: "Contato salvo com sucesso!",
+      });
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setContactFeedback({
+          type: "error",
+          message: err.response?.data?.message || "Erro ao salvar contato PIX.",
+        });
+      } else {
+        setContactFeedback({
+          type: "error",
+          message: "Erro ao salvar contato PIX.",
+        });
+      }
+    } finally {
+      setSavingContact(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -55,6 +97,35 @@ export function StepConfirm({ recipient, amount, scheduledAt, onNext, loading, e
             {scheduledAt ? new Date(scheduledAt).toLocaleString("pt-BR") : "Imediato"}
           </span>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Button
+          type="button"
+          onClick={handleSaveContact}
+          disabled={savingContact || contactSaved || loading}
+          className="w-full h-11 text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 gap-2 border border-indigo-200 disabled:opacity-60"
+        >
+          {savingContact ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : contactSaved ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          ) : (
+            <UserPlus className="w-4 h-4" />
+          )}
+          {contactSaved ? "Salvo nos contatos PIX" : "Salvar nos meus contatos PIX"}
+        </Button>
+
+        {contactFeedback.type === "success" && (
+          <p className="text-xs font-medium text-emerald-600 text-center">
+            {contactFeedback.message}
+          </p>
+        )}
+        {contactFeedback.type === "error" && (
+          <p role="alert" className="text-xs font-medium text-red-600 text-center">
+            {contactFeedback.message}
+          </p>
+        )}
       </div>
 
       {error && <p role="alert" className="text-sm font-medium text-red-600">{error}</p>}

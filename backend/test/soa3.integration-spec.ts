@@ -9,6 +9,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { ContaService } from '../src/conta/conta.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { HistoricoPixService } from '../src/shared/historico-pix/historico-pix.service';
 import { limiteDiarioExcedido } from '../src/shared/historico-pix/limite-diario-pix';
@@ -111,6 +112,84 @@ describe('SOA 3 no PostgreSQL', () => {
       await prisma.conta.findUniqueOrThrow({ where: { contaId: id } })
     ).saldo.toNumber();
   }
+
+  it('exige aceite do destinatário e impede respostas concorrentes', async () => {
+    const d = await preparar();
+    const contas = new ContaService(prisma);
+    const convite = await contas.adicionarCotitular(
+      d.origem.contaId,
+      d.a.usuarioId,
+      { identificador: d.b.email, papel: 'OPERADOR' },
+    );
+    expect(
+      await prisma.usuarioConta.findUnique({
+        where: {
+          usuarioId_contaId: {
+            usuarioId: d.b.usuarioId,
+            contaId: d.origem.contaId,
+          },
+        },
+      }),
+    ).toBeNull();
+    await expect(
+      contas.adicionarCotitular(d.origem.contaId, d.a.usuarioId, {
+        identificador: d.b.email,
+        papel: 'OPERADOR',
+      }),
+    ).rejects.toThrow();
+    await expect(
+      contas.responderConvite(convite.conviteId, d.a.usuarioId, true),
+    ).rejects.toThrow();
+    const resultados = await Promise.allSettled([
+      contas.responderConvite(convite.conviteId, d.b.usuarioId, true),
+      contas.responderConvite(convite.conviteId, d.b.usuarioId, true),
+    ]);
+    expect(resultados.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect(
+      await prisma.usuarioConta.findUnique({
+        where: {
+          usuarioId_contaId: {
+            usuarioId: d.b.usuarioId,
+            contaId: d.origem.contaId,
+          },
+        },
+      }),
+    ).toMatchObject({ papel: 'OPERADOR' });
+  });
+
+  it('permite recusa e impede aceite após a expiração', async () => {
+    const d = await preparar();
+    const contas = new ContaService(prisma);
+    const dto = { identificador: d.b.email, papel: 'DEPENDENTE' };
+    const convite = await contas.adicionarCotitular(
+      d.origem.contaId,
+      d.a.usuarioId,
+      dto,
+    );
+    await contas.responderConvite(convite.conviteId, d.b.usuarioId, false);
+    expect(
+      await prisma.usuarioConta.findUnique({
+        where: {
+          usuarioId_contaId: {
+            usuarioId: d.b.usuarioId,
+            contaId: d.origem.contaId,
+          },
+        },
+      }),
+    ).toBeNull();
+    const renovado = await contas.adicionarCotitular(
+      d.origem.contaId,
+      d.a.usuarioId,
+      dto,
+    );
+    await prisma.conviteCotitular.update({
+      where: { conviteId: renovado.conviteId },
+      data: { expiraEm: new Date(0) },
+    });
+    await expect(
+      contas.responderConvite(renovado.conviteId, d.b.usuarioId, true),
+    ).rejects.toThrow();
+  });
 
   it('aplica o limite diário entre transferências simultâneas da mesma conta', async () => {
     const d = await preparar();

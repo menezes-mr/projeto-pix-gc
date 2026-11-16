@@ -19,5 +19,6 @@ export enum StatusTransacao {
 
 export enum PapelUsuarioConta {
   TITULAR = 'TITULAR',
+  OPERADOR = 'OPERADOR',
   DEPENDENTE = 'DEPENDENTE',
 }

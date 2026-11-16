@@ -3,14 +3,14 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Zap, FileText, User, Bell, LogOut } from "lucide-react";
+import { Home, Zap, FileText, User, Bell, LogOut, ArrowLeftRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { api } from "@/lib/api";
 
 export function Header() {
   const pathname = usePathname();
-  const { user, logout, refreshAccount } = useAuth();
+  const { user, logout, refreshAccount, switchAccount } = useAuth();
   const [notificacoesAbertas, setNotificacoesAbertas] = useState(false);
   const [aviso, setAviso] = useState("");
   const [ultimoAviso, setUltimoAviso] = useState("");
@@ -57,6 +57,7 @@ export function Header() {
   // A consulta deve reiniciar apenas quando a conta mudar.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contaId]);
+  const [switching, setSwitching] = useState(false);
 
   const navItems = [
     { label: "Início", href: "/", icon: Home, noAction: false },
@@ -65,6 +66,17 @@ export function Header() {
     { label: "Perfil", href: "/perfil", icon: User, noAction: false },
   ];
 
+  const handleSwitchAccount = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const targetContaId = e.target.value;
+    if (!targetContaId || targetContaId === user?.contaId) return;
+    setSwitching(true);
+    try {
+      await switchAccount(targetContaId);
+    } finally {
+      setSwitching(false);
+    }
+  };
+
   return (
     <header className="w-full bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-4">
@@ -72,7 +84,14 @@ export function Header() {
           {user?.name?.charAt(0).toUpperCase() || "U"}
         </div>
         <div className="flex flex-col">
-          <span className="text-xs text-gray-500 font-medium">Bem-vindo de volta,</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 font-medium">Bem-vindo de volta,</span>
+            {user?.role && user.role !== "TITULAR" && (
+              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                {user.role}
+              </span>
+            )}
+          </div>
           <span className="text-sm font-bold text-gray-900">Olá, {user?.name || "Usuário"}</span>
         </div>
       </div>
@@ -115,6 +134,29 @@ export function Header() {
       </nav>
 
       <div className="flex items-center gap-2">
+        {user?.accounts && user.accounts.length > 1 && (
+          <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5">
+            {switching ? (
+              <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin" />
+            ) : (
+              <ArrowLeftRight className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+            )}
+            <select
+              aria-label="Selecionar conta bancária ativa"
+              value={user.contaId || ""}
+              onChange={(e) => void handleSwitchAccount(e)}
+              disabled={switching}
+              className="bg-transparent text-xs font-semibold text-gray-800 focus:outline-none cursor-pointer"
+            >
+              {user.accounts.map((acc) => (
+                <option key={acc.contaId} value={acc.contaId}>
+                  C/C {acc.numeroConta} ({acc.papel}
+                  {acc.papel !== "TITULAR" ? ` - ${acc.titularNome.split(" ")[0]}` : ""})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="relative">
         <button
           type="button"

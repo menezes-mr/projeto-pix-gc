@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { UsuariosService } from './usuarios.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -21,6 +22,11 @@ describe('UsuariosService', () => {
       findMany: jest.Mock;
       count: jest.Mock;
     };
+    transacaoPix: {
+      aggregate: jest.Mock;
+      count: jest.Mock;
+      findMany: jest.Mock;
+    };
     $transaction: jest.Mock;
   };
 
@@ -40,6 +46,11 @@ describe('UsuariosService', () => {
         create: jest.fn(),
         findMany: jest.fn(),
         count: jest.fn(),
+      },
+      transacaoPix: {
+        aggregate: jest.fn(),
+        count: jest.fn(),
+        findMany: jest.fn(),
       },
       $transaction: jest.fn((cb: (tx: typeof prisma) => Promise<unknown>) =>
         cb(prisma),
@@ -168,5 +179,70 @@ describe('UsuariosService', () => {
       skip: 0,
       take: 100,
     });
+  });
+
+  it('deve gerar relatorio consolidado do usuario no periodo selecionado', async () => {
+    prisma.usuario.findFirst.mockResolvedValue({
+      usuarioId: 'u-1',
+      status: 'ATIVO',
+      contas: [{ contaId: 'conta-1' }],
+    });
+    prisma.transacaoPix.aggregate
+      .mockResolvedValueOnce({ _sum: { valor: new Prisma.Decimal(150) } })
+      .mockResolvedValueOnce({ _sum: { valor: new Prisma.Decimal(400) } });
+    prisma.transacaoPix.count.mockResolvedValue(3);
+    prisma.transacaoPix.findMany.mockResolvedValue([
+      {
+        transacaoId: 'tx-1',
+        valor: new Prisma.Decimal(400),
+        tipoOperacao: 'TRANSFERENCIA',
+        status: 'EFETIVADA',
+        chavePixUtilizada: 'maria@email.com',
+        dataEfetivacao: new Date('2026-11-10T10:00:00Z'),
+        dataAgendamento: null,
+        contaOrigemId: 'conta-2',
+        contaDestinoId: 'conta-1',
+        contaOrigem: {
+          contaId: 'conta-2',
+          agencia: '0001',
+          numeroConta: '222222-2',
+        },
+        contaDestino: {
+          contaId: 'conta-1',
+          agencia: '0001',
+          numeroConta: '111111-1',
+        },
+        usuarioSolicitante: { usuarioId: 'u-2', nomeCompleto: 'João' },
+      },
+    ]);
+
+    const relatorio = await service.gerarRelatorioTransacoes(
+      'u-1',
+      'u-1',
+      '2026-11-01',
+      '2026-11-30',
+    );
+
+    expect(relatorio.resumo).toEqual({
+      totalEnviado: 150,
+      totalRecebido: 400,
+      totalEntradas: 400,
+      totalSaidas: 150,
+      balancoPeriodo: 250,
+      quantidadeTransacoes: 3,
+    });
+    expect(relatorio.transacoes).toHaveLength(1);
+    expect(relatorio.transacoes[0].direcao).toBe('ENTRADA');
+  });
+
+  it('deve rejeitar relatorio de outro usuario com ForbiddenException', async () => {
+    await expect(
+      service.gerarRelatorioTransacoes(
+        'u-2',
+        'u-1',
+        '2026-11-01',
+        '2026-11-30',
+      ),
+    ).rejects.toThrow(ForbiddenException);
   });
 });

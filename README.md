@@ -110,3 +110,11 @@ docker exec -it pix_frontend npm run lint
 ```bash
 docker compose down
 ```
+
+### Convites e migrações
+
+Cotitulares recebem convites na página de perfil, válidos por sete dias. O vínculo é criado apenas após o aceite. A consulta de chaves exige autenticação e é limitada a 30 por minuto por usuário, em memória por instância.
+
+O backend usa `prisma migrate deploy` na inicialização. Para um banco novo, as migrações são aplicadas automaticamente. Para um banco existente criado com `db push`, faça backup e compare seu esquema com as migrações antes de usar `prisma migrate resolve --applied` para estabelecer uma linha de base; não marque migrações como aplicadas sem confirmar que seus efeitos estão presentes. Depois aplique as migrações pendentes com `npx prisma migrate deploy`. Não descarte dados para resolver divergências.
+
+Revise os administradores existentes antes de disponibilizar o sistema, especialmente o usuário `admin@pixgc.com` que versões anteriores podiam criar automaticamente. Revogue acessos indevidos e troque senhas conhecidas.

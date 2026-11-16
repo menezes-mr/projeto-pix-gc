@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Lock } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Lock, User, Loader2, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
@@ -16,6 +16,13 @@ interface Recipient {
   contaId?: string;
 }
 
+interface ContatoPix {
+  contatoId: string;
+  nomeContato: string;
+  chavePix: string;
+  tipoChave: string;
+}
+
 interface StepKeyProps {
   onNext: (recipient: Recipient) => void;
 }
@@ -25,10 +32,36 @@ export function StepKey({ onNext }: StepKeyProps) {
   const [pixKey, setPixKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [contacts, setContacts] = useState<ContatoPix[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(true);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = pixKey.trim();
+  useEffect(() => {
+    let active = true;
+
+    const fetchContacts = async () => {
+      try {
+        const response = await api.get<ContatoPix[]>("/contatos");
+        if (active) {
+          setContacts(Array.isArray(response.data) ? response.data : []);
+        }
+      } catch (err: unknown) {
+        console.error("Erro ao carregar contatos PIX:", err);
+      } finally {
+        if (active) {
+          setLoadingContacts(false);
+        }
+      }
+    };
+
+    fetchContacts();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const submitKey = async (keyToSubmit: string) => {
+    const trimmed = keyToSubmit.trim();
     if (trimmed.length <= 3) return;
 
     if (
@@ -38,10 +71,10 @@ export function StepKey({ onNext }: StepKeyProps) {
       setError("Você não pode transferir para si mesmo (sua própria chave PIX).");
       return;
     }
-    
+
     setLoading(true);
     setError("");
-    
+
     try {
       const lookupKey = /^[\d.\-/\s]+$/.test(trimmed)
         ? trimmed.replace(/\D/g, "")
@@ -66,6 +99,17 @@ export function StepKey({ onNext }: StepKeyProps) {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitKey(pixKey);
+  };
+
+  const handleSelectContact = async (contact: ContatoPix) => {
+    if (loading) return;
+    setPixKey(contact.chavePix);
+    await submitKey(contact.chavePix);
+  };
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
@@ -83,6 +127,48 @@ export function StepKey({ onNext }: StepKeyProps) {
         className={`text-lg py-6 ${error ? "border-red-500" : ""}`}
       />
       {error && <span className="text-red-500 text-sm font-medium -mt-4">{error}</span>}
+
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+          <Users className="w-4 h-4" />
+          <span>Contatos Rápidos</span>
+        </div>
+
+        {loadingContacts ? (
+          <div className="flex items-center justify-center py-4 text-gray-400 gap-2 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Carregando contatos...</span>
+          </div>
+        ) : contacts.length === 0 ? (
+          <p className="text-xs text-gray-400 py-2">
+            Nenhum contato salvo encontrado.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {contacts.map((contact) => (
+              <button
+                key={contact.contatoId}
+                type="button"
+                disabled={loading}
+                onClick={() => handleSelectContact(contact)}
+                className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50/70 hover:bg-indigo-50/60 hover:border-indigo-200 transition-colors text-left disabled:opacity-50"
+              >
+                <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0">
+                  {contact.nomeContato.trim().charAt(0).toUpperCase() || <User className="w-4 h-4" />}
+                </div>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-sm font-semibold text-gray-900 truncate">
+                    {contact.nomeContato}
+                  </span>
+                  <span className="text-xs text-gray-500 truncate">
+                    {contact.tipoChave}: {contact.chavePix}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <Button 
         type="submit" 

@@ -89,7 +89,7 @@ export function DangerZone() {
         <Button 
           type="button"
           onClick={handleEncerrarConta}
-          disabled={hasBalance || loading || !user?.contaId}
+          disabled={hasBalance || loading || !user?.contaId || (Boolean(user?.role) && user?.role !== "TITULAR")}
           className="flex-1 bg-transparent border border-gray-200 text-gray-400 shadow-sm h-11 disabled:bg-transparent disabled:opacity-50 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Encerrar Conta Bancária"}

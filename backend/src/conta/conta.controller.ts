@@ -18,14 +18,49 @@ import { ContaService } from './conta.service';
 import { CreateContaDto } from './dto/create-conta.dto';
 import { UpdateContaDto } from './dto/update-conta.dto';
 import { ExtratoQueryDto } from './dto/extrato-query.dto';
+import { AdicionarCotitularDto } from './dto/adicionar-cotitular.dto';
 import { JwtAuthGuard, RequestAutenticada } from '../auth/jwt-auth.guard';
 import { BloquearContaDto } from './dto/bloquear-conta.dto';
+import { DesbloquearContaDto } from './dto/desbloquear-conta.dto';
 import { AdminRoleGuard } from '../common/guards/roles.guard';
 
 @ApiTags('Contas')
 @Controller('contas')
 export class ContaController {
   constructor(private readonly contaService: ContaService) {}
+
+  @Get('convites/recebidos')
+  @UseGuards(JwtAuthGuard)
+  async convitesRecebidos(@Req() req: RequestAutenticada) {
+    return this.contaService.listarConvitesRecebidos(req.user.usuarioId);
+  }
+
+  @Post('convites/:conviteId/aceitar')
+  @UseGuards(JwtAuthGuard)
+  async aceitarConvite(
+    @Param('conviteId') id: string,
+    @Req() req: RequestAutenticada,
+  ) {
+    return this.contaService.responderConvite(id, req.user.usuarioId, true);
+  }
+
+  @Post('convites/:conviteId/recusar')
+  @UseGuards(JwtAuthGuard)
+  async recusarConvite(
+    @Param('conviteId') id: string,
+    @Req() req: RequestAutenticada,
+  ) {
+    return this.contaService.responderConvite(id, req.user.usuarioId, false);
+  }
+
+  @Get(':id/convites')
+  @UseGuards(JwtAuthGuard)
+  async convitesEnviados(
+    @Param('id') id: string,
+    @Req() req: RequestAutenticada,
+  ) {
+    return this.contaService.listarConvitesEnviados(id, req.user.usuarioId);
+  }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
@@ -126,6 +161,20 @@ export class ContaController {
     );
   }
 
+  @Patch(':id/desbloquear')
+  @UseGuards(JwtAuthGuard, AdminRoleGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Desbloquear conta bancária (Requer ADMIN)',
+  })
+  async desbloquearConta(
+    @Param('id') contaId: string,
+    @Body() dto?: DesbloquearContaDto,
+  ) {
+    return await this.contaService.desbloquearConta(contaId, dto);
+  }
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -137,5 +186,52 @@ export class ContaController {
   ) {
     await this.contaService.verificarTitular(contaId, req.user.usuarioId);
     return await this.contaService.encerrarConta(contaId, req.user.usuarioId);
+  }
+
+  @Get(':id/titulares')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Listar titulares e cotitulares da conta' })
+  async listarCotitulares(
+    @Param('id') contaId: string,
+    @Req() req: RequestAutenticada,
+  ) {
+    await this.contaService.verificarVinculo(contaId, req.user.usuarioId);
+    return await this.contaService.listarCotitulares(contaId);
+  }
+
+  @Post(':id/titulares')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Adicionar cotitular à conta bancária' })
+  async adicionarCotitular(
+    @Param('id') contaId: string,
+    @Body() dto: AdicionarCotitularDto,
+    @Req() req: RequestAutenticada,
+  ) {
+    return await this.contaService.adicionarCotitular(
+      contaId,
+      req.user.usuarioId,
+      dto,
+    );
+  }
+
+  @Delete(':id/titulares/:usuarioId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Remover cotitular da conta bancária' })
+  async removerCotitular(
+    @Param('id') contaId: string,
+    @Param('usuarioId') usuarioId: string,
+    @Req() req: RequestAutenticada,
+  ) {
+    return await this.contaService.removerCotitular(
+      contaId,
+      req.user.usuarioId,
+      usuarioId,
+    );
   }
 }

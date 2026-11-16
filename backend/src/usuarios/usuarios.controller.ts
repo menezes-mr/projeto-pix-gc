@@ -13,9 +13,15 @@ import {
   UseGuards,
   DefaultValuePipe,
   ParseIntPipe,
+  ParseUUIDPipe,
   ForbiddenException,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
@@ -43,6 +49,28 @@ export class UsuariosController {
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ) {
     return this.usuariosService.listarLogs(req.user.usuarioId, page, limit);
+  }
+
+  @Get(':id/relatorios/transacoes')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Gerar relatório consolidado de transações do usuário por período',
+  })
+  @ApiQuery({ name: 'dataInicio', required: false, type: String })
+  @ApiQuery({ name: 'dataFim', required: false, type: String })
+  gerarRelatorioTransacoes(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: RequestAutenticada,
+    @Query('dataInicio') dataInicio?: string,
+    @Query('dataFim') dataFim?: string,
+  ) {
+    return this.usuariosService.gerarRelatorioTransacoes(
+      id,
+      req.user.usuarioId,
+      dataInicio,
+      dataFim,
+    );
   }
 
   @Delete(':id')

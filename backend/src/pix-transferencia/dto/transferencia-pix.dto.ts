@@ -28,4 +28,12 @@ export class TransferenciaPixDto {
     },
   )
   dataAgendamento?: string;
+
+  @IsOptional()
+  @IsNumber()
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  longitude?: number;
 }

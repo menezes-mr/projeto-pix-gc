@@ -39,6 +39,12 @@ const ACTION_LABELS: Record<string, string> = {
 function formatAction(acao: string) {
   if (ACTION_LABELS[acao]) return ACTION_LABELS[acao];
   if (acao.startsWith("INATIVACAO DE CHAVE PIX")) return "Chave PIX removida";
+  if (acao.startsWith("ADICAO_COTITULAR")) {
+    return acao.replace("ADICAO_COTITULAR:", "Cotitular vinculado —");
+  }
+  if (acao.startsWith("REMOCAO_COTITULAR")) {
+    return acao.replace("REMOCAO_COTITULAR:", "Cotitular removido —");
+  }
   const text = acao.replace(/_/g, " ").toLowerCase();
   return text.charAt(0).toUpperCase() + text.slice(1);
 }

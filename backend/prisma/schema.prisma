@@ -23,6 +23,7 @@ model Usuario {
   receberEmail    Boolean        @default(false)
   receberPush     Boolean        @default(false)
 
+  convitesRecebidos ConviteCotitular[]
   contas          UsuarioConta[]
   contatos        ContatoPix[]
   logs            LogAtividade[]
@@ -39,6 +40,7 @@ model Conta {
   dataCriacao     DateTime       @default(now())
   dataAtualizacao DateTime       @updatedAt
 
+  convites          ConviteCotitular[]
   usuarios          UsuarioConta[]
   chavesPix         ChavePix[]
   transacoesOrigem  TransacaoPix[] @relation("ContaOrigem")
@@ -54,6 +56,19 @@ model UsuarioConta {
   conta     Conta   @relation(fields: [contaId], references: [contaId])
 
   @@id([usuarioId, contaId])
+}
+
+model ConviteCotitular {
+  conviteId String @id @default(uuid())
+  contaId String
+  usuarioId String
+  papel String
+  status String @default("PENDENTE")
+  criadoEm DateTime @default(now())
+  expiraEm DateTime
+  conta Conta @relation(fields: [contaId], references: [contaId])
+  usuario Usuario @relation(fields: [usuarioId], references: [usuarioId])
+  @@unique([contaId, usuarioId])
 }
 
 model ChavePix {

@@ -7,6 +7,7 @@ import {
   ArrowUpRight,
   ChevronLeft,
   ChevronRight,
+  Download,
   FileText,
   Loader2,
   X,
@@ -31,6 +32,34 @@ interface Filters {
   page: number;
   startDate: string;
   endDate: string;
+}
+
+interface UserReportResponse {
+  usuarioId: string;
+  resumo: {
+    totalEnviado: number;
+    totalRecebido: number;
+    balancoPeriodo: number;
+    quantidadeTransacoes: number;
+  };
+  transacoes?: Array<{
+    transacaoId: string;
+    valor: number;
+    tipoOperacao: string;
+    direcao?: string;
+    status: string;
+    chavePixUtilizada?: string | null;
+    dataEfetivacao?: string | null;
+    dataAgendamento?: string | null;
+    contaOrigem?: { agencia?: string; numeroConta?: string } | null;
+    contaDestino?: { agencia?: string; numeroConta?: string } | null;
+    usuarioSolicitante?: { nomeCompleto?: string } | null;
+  }>;
+}
+
+function escapeCsvCell(value: unknown): string {
+  const text = value === null || value === undefined ? "" : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
 }
 
 const statusStyles: Record<string, string> = {
@@ -79,6 +108,7 @@ export default function ExtratoPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [exportingCsv, setExportingCsv] = useState(false);
   const [selectedTransaction, setSelectedTransaction] =
     useState<PixTransaction | null>(null);
 
@@ -191,6 +221,102 @@ export default function ExtratoPage() {
     }
   };
 
+  const exportReportCsv = async () => {
+    if (!user?.id) return;
+    const inicio = filters.startDate || startDateDraft;
+    const fim = filters.endDate || endDateDraft;
+    if (inicio && fim && fim < inicio) {
+      setError("A data final não pode ser anterior à data inicial.");
+      return;
+    }
+
+    setExportingCsv(true);
+    setError("");
+
+    try {
+      const { data } = await api.get<UserReportResponse>(
+        `/usuarios/${user.id}/relatorios/transacoes`,
+        {
+          params: {
+            ...(inicio ? { dataInicio: inicio } : {}),
+            ...(fim ? { dataFim: fim } : {}),
+          },
+        },
+      );
+
+      const rows: string[][] = [
+        ["RELATORIO FINANCEIRO DO USUARIO"],
+        ["Usuario ID", data.usuarioId],
+        ["Periodo Inicio", inicio || "Inicio"],
+        ["Periodo Fim", fim || "Atual"],
+        ["Total de Entradas (R$)", Number(data.resumo.totalRecebido).toFixed(2)],
+        ["Total de Saidas (R$)", Number(data.resumo.totalEnviado).toFixed(2)],
+        ["Balanco do Periodo (R$)", Number(data.resumo.balancoPeriodo).toFixed(2)],
+        [
+          "Quantidade de Transacoes Efetivadas",
+          String(data.resumo.quantidadeTransacoes),
+        ],
+        [],
+        [
+          "ID Transacao",
+          "Data/Hora",
+          "Direcao",
+          "Tipo Operacao",
+          "Status",
+          "Valor (R$)",
+          "Chave PIX",
+        ],
+      ];
+
+      const listaTransacoes = data.transacoes ?? transactions;
+      for (const tx of listaTransacoes) {
+        const dataRef = tx.dataEfetivacao || tx.dataAgendamento || "";
+        const dataFormatada = dataRef
+          ? new Date(dataRef).toLocaleString("pt-BR")
+          : "";
+        rows.push([
+          tx.transacaoId,
+          dataFormatada,
+          "direcao" in tx && tx.direcao
+            ? tx.direcao
+            : "contaOrigemId" in tx && tx.contaOrigemId === accountId
+            ? "SAIDA"
+            : "ENTRADA",
+          tx.tipoOperacao,
+          tx.status,
+          Number(tx.valor).toFixed(2),
+          tx.chavePixUtilizada || "",
+        ]);
+      }
+
+      const csvContent =
+        "\uFEFF" +
+        rows.map((row) => row.map(escapeCsvCell).join(";")).join("\r\n");
+
+      const blob = new Blob([csvContent], {
+        type: "text/csv;charset=utf-8;",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const sufixo = inicio || fim ? `_${inicio || "inicio"}_a_${fim || "atual"}` : "";
+      link.setAttribute("download", `relatorio_transacoes${sufixo}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (requestError: unknown) {
+      setError(
+        getErrorMessage(
+          requestError,
+          "Não foi possível exportar o relatório em CSV.",
+        ),
+      );
+    } finally {
+      setExportingCsv(false);
+    }
+  };
+
   return (
     <div className="flex animate-in flex-col gap-6 fade-in duration-300">
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -245,6 +371,19 @@ export default function ExtratoPage() {
             className="h-10 rounded-md border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Últimos 30 dias
+          </button>
+          <button
+            type="button"
+            onClick={() => void exportReportCsv()}
+            disabled={exportingCsv || !user?.id}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {exportingCsv ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            Exportar Relatório (CSV)
           </button>
           {(startDateDraft || endDateDraft) && (
             <button

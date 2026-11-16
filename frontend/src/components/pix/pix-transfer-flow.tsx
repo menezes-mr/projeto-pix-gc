@@ -19,6 +19,28 @@ interface Recipient {
   documentoMascarado: string;
 }
 
+function getCurrentCoordinates(): Promise<{ latitude: number; longitude: number } | null> {
+  return new Promise((resolve) => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      () => {
+        resolve(null);
+      },
+      { timeout: 5000 }
+    );
+  });
+}
+
 export function PixTransferFlow({ onCompleted }: { onCompleted?: () => void }) {
   const { refreshAccount, user } = useAuth();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -45,10 +67,12 @@ export function PixTransferFlow({ onCompleted }: { onCompleted?: () => void }) {
     setLoading(true);
     setError("");
     try {
+      const coords = await getCurrentCoordinates();
       const response = await api.post<PixTransaction>('/pix/transferencia', {
         chavePixDestino: recipient.chavePix,
         valor: amount,
         ...(scheduledAt ? { dataAgendamento: new Date(scheduledAt).toISOString() } : {}),
+        ...(coords ? { latitude: coords.latitude, longitude: coords.longitude } : {}),
       }, { timeout: 35000 });
       setTransaction(response.data);
       await refreshAccount();
@@ -88,6 +112,22 @@ export function PixTransferFlow({ onCompleted }: { onCompleted?: () => void }) {
     3: "100%",
     4: "100%",
   };
+
+  if (user?.role === "DEPENDENTE") {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 flex flex-col items-center justify-center text-center gap-3 min-h-[280px]">
+        <h3 className="text-lg font-bold text-gray-900">
+          Modo de Consulta Supervisionada (DEPENDENTE)
+        </h3>
+        <p className="text-sm text-gray-500 max-w-md">
+          Na conta <strong>C/C {user.accountNumber}</strong>, seu papel é{" "}
+          <strong>DEPENDENTE</strong>. Você pode consultar o saldo, o extrato e
+          as chaves PIX da conta ao lado, mas o envio de transferências é
+          restrito a Titulares e Operadores.
+        </p>
+      </div>
+    );
+  }
 
   if (step === 4) {
     return (

@@ -26,7 +26,14 @@ export function BalanceCard() {
     <div className="w-full bg-gradient-to-r from-[#3b3c5a] via-[#484ea3] to-[#5b63e4] rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
       <div className="flex items-center justify-between mb-2">
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-white/70">Saldo disponível</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-white/70">Saldo disponível</span>
+            {user?.role && (
+              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-white/15 text-white">
+                {user.role}
+              </span>
+            )}
+          </div>
           {user?.accountNumber && (
             <span className="text-xs text-white/50">
               Agência {user.agency || "0001"} • Conta {user.accountNumber}

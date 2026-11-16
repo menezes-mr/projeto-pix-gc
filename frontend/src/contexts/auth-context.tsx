@@ -2,6 +2,18 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import axios from "axios";
+
+export interface UserAccountLink {
+  contaId: string;
+  agencia: string;
+  numeroConta: string;
+  saldo: number;
+  limiteDiarioPix: number;
+  status: string;
+  papel: "TITULAR" | "OPERADOR" | "DEPENDENTE" | string;
+  titularNome: string;
+}
 
 export interface User {
   id: string;
@@ -11,12 +23,15 @@ export interface User {
   phone?: string;
   balance: number;
   contaId?: string | null;
+  role?: "TITULAR" | "OPERADOR" | "DEPENDENTE" | string;
   agency?: string;
   accountNumber?: string;
   dailyLimit?: number;
+  accountStatus?: string;
   receberSms?: boolean;
   receberEmail?: boolean;
   receberPush?: boolean;
+  accounts?: UserAccountLink[];
 }
 
 interface LoginData {
@@ -43,12 +58,15 @@ interface LoginResponse {
     telefone: string | null;
     saldo: number;
     contaId: string | null;
+    papel?: string;
     agencia?: string;
     numeroConta?: string;
+    statusConta?: string;
     limiteDiarioPix?: number;
     receberSms?: boolean;
     receberEmail?: boolean;
     receberPush?: boolean;
+    contas?: UserAccountLink[];
   };
 }
 
@@ -58,6 +76,7 @@ interface AuthContextType {
   login: (userData: LoginData) => Promise<void>;
   register: (userData: RegistrationData) => Promise<void>;
   refreshAccount: () => Promise<void>;
+  switchAccount: (contaId: string) => Promise<void>;
   updateProfile: (data: {
     email?: string;
     phone?: string;
@@ -91,20 +110,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }, 0);
 
         if (parsed.contaId) {
-          api.get(`/contas/${parsed.contaId}`)
-            .then((res) => {
+          Promise.all([
+            api.get(`/contas/${parsed.contaId}`),
+            api.get<UserAccountLink[]>("/auth/minhas-contas").catch(() => null),
+          ])
+            .then(([res, resContas]) => {
               if (sessionStorage.getItem("pix_token") !== storedToken) return;
+              const contasList = resContas?.data ?? parsed.accounts;
+              const vinculoAtual = contasList?.find(
+                (c) => c.contaId === parsed.contaId,
+              );
               const updated: User = {
                 ...parsed,
                 balance: Number(res.data.saldo),
                 agency: res.data.agencia,
                 accountNumber: res.data.numeroConta,
                 dailyLimit: Number(res.data.limiteDiarioPix),
+                accountStatus: res.data.status,
+                role: vinculoAtual?.papel || parsed.role || "TITULAR",
+                accounts: contasList,
               };
               setUser(updated);
               sessionStorage.setItem("pix_user", JSON.stringify(updated));
             })
-            .catch(() => {});
+            .catch((err: unknown) => {
+              if (
+                axios.isAxiosError(err) &&
+                (err.response?.status === 403 || err.response?.status === 401)
+              ) {
+                const updated: User = {
+                  ...parsed,
+                  accountStatus: "BLOQUEADA",
+                };
+                setUser(updated);
+                sessionStorage.setItem("pix_user", JSON.stringify(updated));
+              }
+            });
         }
       } catch {
         sessionStorage.removeItem("pix_user");
@@ -123,20 +164,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshAccount = async () => {
     if (!user?.contaId) return;
     try {
-      const res = await api.get(`/contas/${user.contaId}`);
+      const [res, resContas] = await Promise.all([
+        api.get(`/contas/${user.contaId}`),
+        api.get<UserAccountLink[]>("/auth/minhas-contas").catch(() => null),
+      ]);
       setUser((prev) => {
-        if (!prev || prev.id !== user.id) return prev;
+        if (!prev || prev.id !== user.id || prev.contaId !== user.contaId) return prev;
+        const contasList = resContas?.data ?? prev.accounts;
+        const vinculoAtual = contasList?.find(
+          (c) => c.contaId === prev.contaId,
+        );
         const updated: User = {
           ...prev,
           balance: Number(res.data.saldo),
           agency: res.data.agencia,
           accountNumber: res.data.numeroConta,
           dailyLimit: Number(res.data.limiteDiarioPix),
+          accountStatus: res.data.status,
+          role: vinculoAtual?.papel || prev.role || "TITULAR",
+          accounts: contasList,
         };
         sessionStorage.setItem("pix_user", JSON.stringify(updated));
         return updated;
       });
-    } catch {}
+    } catch (err: unknown) {
+      if (
+        axios.isAxiosError(err) &&
+        (err.response?.status === 403 || err.response?.status === 401)
+      ) {
+        setUser((prev) => {
+          if (!prev) return null;
+          const updated: User = {
+            ...prev,
+            accountStatus: "BLOQUEADA",
+          };
+          sessionStorage.setItem("pix_user", JSON.stringify(updated));
+          return updated;
+        });
+      }
+    }
+  };
+
+  const switchAccount = async (contaId: string) => {
+    if (!user || contaId === user.contaId) return;
+    const response = await api.post<LoginResponse>("/auth/trocar-conta", {
+      contaId,
+    });
+    const { access_token, usuario } = response.data;
+    const mappedUser: User = {
+      id: usuario.id,
+      name: usuario.nome,
+      document: usuario.documento,
+      email: usuario.email,
+      phone: usuario.telefone ?? undefined,
+      balance: usuario.saldo,
+      contaId: usuario.contaId,
+      role: usuario.papel || "TITULAR",
+      agency: usuario.agencia || "0001",
+      accountNumber: usuario.numeroConta || "",
+      accountStatus: usuario.statusConta || "ATIVA",
+      dailyLimit: usuario.limiteDiarioPix || 1000,
+      receberSms: usuario.receberSms ?? false,
+      receberEmail: usuario.receberEmail ?? false,
+      receberPush: usuario.receberPush ?? false,
+      accounts: usuario.contas ?? user.accounts,
+    };
+
+    sessionStorage.setItem("pix_token", access_token);
+    sessionStorage.setItem("pix_user", JSON.stringify(mappedUser));
+    setUser(mappedUser);
   };
 
   const updateProfile = async (data: {
@@ -204,12 +300,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       phone: usuario.telefone ?? undefined,
       balance: usuario.saldo,
       contaId: usuario.contaId,
+      role: usuario.papel || "TITULAR",
       agency: usuario.agencia || "0001",
       accountNumber: usuario.numeroConta || "",
+      accountStatus: usuario.statusConta || "ATIVA",
       dailyLimit: usuario.limiteDiarioPix || 1000,
       receberSms: usuario.receberSms ?? false,
       receberEmail: usuario.receberEmail ?? false,
       receberPush: usuario.receberPush ?? false,
+      accounts: usuario.contas ?? [],
     };
 
     sessionStorage.setItem("pix_token", access_token);
@@ -246,7 +345,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, refreshAccount, updateProfile, updateDailyLimit, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, refreshAccount, switchAccount, updateProfile, updateDailyLimit, logout }}>
       {children}
     </AuthContext.Provider>
   );

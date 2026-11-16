@@ -260,6 +260,8 @@ export class PixTransferenciaService {
             contaOrigemId,
             contaDestinoId: chaveDestino.contaId,
             usuarioSolicitanteId: usuarioId,
+            latitude: dto.latitude,
+            longitude: dto.longitude,
           },
           tx,
           instanteEfetivacao,
