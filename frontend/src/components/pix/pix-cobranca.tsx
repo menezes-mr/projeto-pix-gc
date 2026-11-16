@@ -95,9 +95,9 @@ export function PixCobranca() {
         </p>
       )}
       {loading ? (
-        <p>Carregando chaves…</p>
+        <p className="text-sm text-gray-600">Carregando chaves…</p>
       ) : chaves.length === 0 ? (
-        <p className="text-gray-500">
+        <p className="text-gray-600 text-sm">
           Nenhuma chave ativa. Cadastre uma em Minhas Chaves.
         </p>
       ) : (
@@ -125,7 +125,7 @@ export function PixCobranca() {
           <label className="text-sm font-bold text-gray-900">
             Valor opcional (R$)
             <input
-              className="mt-2 block w-full rounded-lg border border-gray-300 bg-white p-3 font-normal text-gray-900 placeholder:text-gray-900 placeholder:font-normal outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
+              className="mt-2 block w-full rounded-lg border border-gray-300 bg-white p-3 font-normal text-gray-900 placeholder:text-gray-500 placeholder:font-normal outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
               inputMode="decimal"
               placeholder="Ex.: 10,50"
               value={valor}

@@ -109,7 +109,7 @@ export function RecentTransactions({
           <h3 className="text-lg font-bold text-gray-900">
             Últimas Movimentações & Agendamentos
           </h3>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-600 mt-0.5">
             Acompanhe transferências recentes e PIX agendados da conta ativa
           </p>
         </div>
@@ -194,12 +194,12 @@ export function RecentTransactions({
           <Loader2 className="w-7 h-7 animate-spin" />
         </div>
       ) : recentList.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center text-gray-400 gap-2 flex-1 border border-dashed border-gray-200 rounded-xl">
-          <FileText className="w-8 h-8 text-gray-300" />
-          <p className="text-sm font-medium text-gray-600">
+        <div className="flex flex-col items-center justify-center py-12 text-center text-gray-600 gap-2 flex-1 border border-dashed border-gray-200 rounded-xl">
+          <FileText className="w-8 h-8 text-gray-400" />
+          <p className="text-sm font-semibold text-gray-700">
             Nenhuma movimentação registrada ainda
           </p>
-          <p className="text-xs text-gray-400 max-w-xs">
+          <p className="text-xs text-gray-600 max-w-xs">
             Realize uma transferência ou gere uma cobrança QR Code na Área PIX
             para começar.
           </p>
@@ -290,7 +290,7 @@ export function RecentTransactions({
                         {statusLabels[tx.status] || tx.status}
                       </span>
                     </div>
-                    <span className="text-xs text-gray-500 truncate">
+                    <span className="text-xs text-gray-600 truncate">
                       {subtitle} •{" "}
                       {isPending
                         ? `Programado: ${formatDateTime(dateRef)}`
@@ -305,9 +305,9 @@ export function RecentTransactions({
                       isPending
                         ? "text-amber-700"
                         : isCanceledOrFailed
-                          ? "text-gray-400 line-through"
+                          ? "text-gray-500 line-through"
                           : isIncoming
-                            ? "text-emerald-600"
+                            ? "text-emerald-700"
                             : "text-gray-900"
                     }`}
                   >
@@ -320,7 +320,7 @@ export function RecentTransactions({
                   <button
                     type="button"
                     onClick={() => setSelectedTx(tx)}
-                    className="text-xs font-medium text-gray-500 hover:text-indigo-600 border border-gray-200 hover:border-indigo-200 rounded-lg px-2.5 py-1 transition-colors cursor-pointer"
+                    className="text-xs font-semibold text-gray-700 hover:text-indigo-600 border border-gray-300 hover:border-indigo-200 rounded-lg px-2.5 py-1 transition-colors cursor-pointer"
                   >
                     Recibo
                   </button>

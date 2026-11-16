@@ -125,27 +125,27 @@ export function PixExtrato({ revisao }: { revisao: number }) {
     canCancelSchedule;
 
   return (
-    <section className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col gap-3">
+    <section className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col gap-3 text-gray-900">
       <div>
-        <h2 className="font-bold text-xl">Extrato PIX</h2>
-        <p className="text-sm text-gray-500">Últimas 50 transações</p>
+        <h2 className="font-bold text-xl text-gray-900">Extrato PIX</h2>
+        <p className="text-sm text-gray-600">Últimas 50 transações</p>
       </div>
       {mensagem && (
-        <p role="status" className="text-emerald-700 text-sm">
+        <p role="status" className="text-emerald-700 text-sm font-medium">
           {mensagem}
         </p>
       )}
       {erro && !selecionada && (
-        <p role="alert" className="text-red-700 text-sm">
+        <p role="alert" className="text-red-700 text-sm font-medium">
           {erro}
         </p>
       )}
       {!contaId ? (
-        <p className="text-gray-500">Conta indisponível.</p>
+        <p className="text-gray-600">Conta indisponível.</p>
       ) : carregando ? (
-        <p className="text-gray-500">Carregando extrato…</p>
+        <p className="text-gray-600">Carregando extrato…</p>
       ) : itens.length === 0 ? (
-        <p className="text-gray-500">Nenhuma transação encontrada.</p>
+        <p className="text-gray-600">Nenhuma transação encontrada.</p>
       ) : (
         itens.map((t) => {
           const entrada =
@@ -178,7 +178,7 @@ export function PixExtrato({ revisao }: { revisao: number }) {
 
           return (
             <button
-              className="border border-gray-100 rounded-lg p-3 text-left flex justify-between items-center gap-3 hover:bg-gray-50"
+              className="border border-gray-200 rounded-lg p-3 text-left flex justify-between items-center gap-3 hover:bg-gray-50"
               key={t.transacaoId}
               onClick={() => {
                 setSelecionada(t);
@@ -188,8 +188,8 @@ export function PixExtrato({ revisao }: { revisao: number }) {
               }}
             >
               <span>
-                <strong>{titulo}</strong>
-                <span className="block text-sm text-gray-500">
+                <strong className="text-gray-900">{titulo}</strong>
+                <span className="block text-sm text-gray-600">
                   {t.transacaoEstornoId
                     ? "Estornada"
                     : isPendente
@@ -203,7 +203,7 @@ export function PixExtrato({ revisao }: { revisao: number }) {
                   isPendente
                     ? "text-amber-700 font-semibold"
                     : isCanceladaOuFalha
-                      ? "text-gray-400 line-through"
+                      ? "text-gray-500 line-through"
                       : entrada
                         ? "text-emerald-700 font-semibold"
                         : "text-gray-900 font-semibold"
@@ -226,14 +226,14 @@ export function PixExtrato({ revisao }: { revisao: number }) {
           aria-label={confirmar ? "Confirmar devolução" : "Detalhes do PIX"}
           className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
         >
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-auto flex flex-col gap-3">
-            <h3 className="text-xl font-bold">
+          <div className="bg-white text-gray-900 rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-auto flex flex-col gap-3">
+            <h3 className="text-xl font-bold text-gray-900">
               {confirmar ? "Confirmar devolução" : "Detalhes do PIX"}
             </h3>
-            <p>
-              Valor: <strong>{dinheiro(selecionada.valor)}</strong>
+            <p className="text-gray-800">
+              Valor: <strong className="text-gray-900">{dinheiro(selecionada.valor)}</strong>
             </p>
-            <p>
+            <p className="text-gray-800">
               {selecionada.dataEfetivacao ? "Data da efetivação" : "Agendado para"}:{" "}
               {selecionada.dataEfetivacao
                 ? new Date(selecionada.dataEfetivacao).toLocaleString("pt-BR")
@@ -243,11 +243,11 @@ export function PixExtrato({ revisao }: { revisao: number }) {
                     )
                   : "Não efetivada"}
             </p>
-            <p className="break-all">
+            <p className="break-all text-gray-800">
               Conta remetente: {selecionada.contaOrigemId || "Não informada"}
             </p>
-            <p className="break-all">ID: {selecionada.transacaoId}</p>
-            <p>
+            <p className="break-all text-gray-800">ID: {selecionada.transacaoId}</p>
+            <p className="text-gray-800">
               Status:{" "}
               {selecionada.transacaoEstornoId
                 ? "Estornada"
@@ -256,10 +256,10 @@ export function PixExtrato({ revisao }: { revisao: number }) {
                   : selecionada.status}
             </p>
             {selecionada.motivoEstorno && (
-              <p>Motivo: {selecionada.motivoEstorno}</p>
+              <p className="text-gray-800">Motivo: {selecionada.motivoEstorno}</p>
             )}
             {erro && (
-              <p role="alert" className="text-red-700 text-sm">
+              <p role="alert" className="text-red-700 text-sm font-medium">
                 {erro}
               </p>
             )}
@@ -276,7 +276,7 @@ export function PixExtrato({ revisao }: { revisao: number }) {
             {elegivel && !confirmar && (
               <button
                 onClick={() => setConfirmar(true)}
-                className="bg-gray-900 text-white rounded-lg p-3"
+                className="bg-gray-900 text-white rounded-lg p-3 font-semibold"
               >
                 Devolver PIX (Estornar)
               </button>
@@ -286,19 +286,19 @@ export function PixExtrato({ revisao }: { revisao: number }) {
                 <p className="text-sm text-amber-800 bg-amber-50 rounded-lg p-3">
                   O valor será devolvido integralmente à conta que enviou o PIX.
                 </p>
-                <label className="text-sm font-semibold">
+                <label className="text-sm font-semibold text-gray-900">
                   Motivo (opcional)
                   <textarea
                     maxLength={500}
                     value={motivo}
                     onChange={(e) => setMotivo(e.target.value)}
-                    className="block w-full border rounded p-2 font-normal mt-2"
+                    className="block w-full border border-gray-300 bg-white text-gray-900 rounded p-2 font-normal mt-2"
                   />
                 </label>
                 <button
                   disabled={ocupado || !elegivel}
                   onClick={devolver}
-                  className="bg-gray-900 text-white rounded-lg p-3 disabled:opacity-50"
+                  className="bg-gray-900 text-white rounded-lg p-3 font-semibold disabled:opacity-50"
                 >
                   {ocupado ? "Processando…" : "Confirmar devolução"}
                 </button>
@@ -311,7 +311,7 @@ export function PixExtrato({ revisao }: { revisao: number }) {
                 setConfirmar(false);
                 setErro("");
               }}
-              className="border rounded-lg p-3 disabled:opacity-50"
+              className="border border-gray-300 text-gray-800 hover:bg-gray-50 rounded-lg p-3 font-medium disabled:opacity-50"
             >
               {confirmar ? "Cancelar" : "Fechar"}
             </button>

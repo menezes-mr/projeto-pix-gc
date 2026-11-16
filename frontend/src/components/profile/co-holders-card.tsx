@@ -412,15 +412,15 @@ export function CoHoldersCard() {
         )}
       </div>
 
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-gray-600">
         Gerencie os membros vinculados à conta ativa (
-        <strong>C/C {user?.accountNumber || "---"}</strong>) e alterne entre as
+        <strong className="text-gray-900">C/C {user?.accountNumber || "---"}</strong>) e alterne entre as
         contas que você participa.
       </p>
 
       {user?.accounts && user.accounts.length > 1 && (
         <div className="flex flex-col gap-2 bg-gray-50/80 border border-gray-100 rounded-lg p-3.5">
-          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+          <span className="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
             <ArrowLeftRight className="w-3.5 h-3.5 text-indigo-600" />
             Contas que Participo ({user.accounts.length})
           </span>
@@ -515,7 +515,7 @@ export function CoHoldersCard() {
           <Loader2 className="w-6 h-6 animate-spin" />
         </div>
       ) : cotitulares.length === 0 ? (
-        <div className="text-sm text-gray-400 text-center py-4">
+        <div className="text-sm text-gray-600 text-center py-4">
           Nenhum membro vinculado encontrado.
         </div>
       ) : (
@@ -543,7 +543,7 @@ export function CoHoldersCard() {
                       {membro.papel}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 truncate mt-0.5">
+                  <p className="text-xs text-gray-600 truncate mt-0.5">
                     {membro.usuario?.email} · CPF/CNPJ:{" "}
                     {membro.usuario?.cpfCnpj}
                   </p>
@@ -561,7 +561,7 @@ export function CoHoldersCard() {
                         ? "Não é possível remover o único titular ativo da conta"
                         : "Remover cotitular"
                     }
-                    className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {removingId === membro.usuarioId ? (
                       <Loader2 className="w-4 h-4 animate-spin text-red-600" />
@@ -585,22 +585,22 @@ export function CoHoldersCard() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+          <label className="flex flex-col gap-1 text-xs font-semibold text-gray-700">
             Data Inicial
             <input
               type="date"
               value={dataInicio}
               onChange={(e) => setDataInicio(e.target.value)}
-              className="h-9 rounded-lg border border-gray-200 px-3 text-xs text-gray-800"
+              className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-900"
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+          <label className="flex flex-col gap-1 text-xs font-semibold text-gray-700">
             Data Final
             <input
               type="date"
               value={dataFim}
               onChange={(e) => setDataFim(e.target.value)}
-              className="h-9 rounded-lg border border-gray-200 px-3 text-xs text-gray-800"
+              className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-900"
             />
           </label>
         </div>

@@ -54,7 +54,7 @@ export function SecuritySettings() {
         )}
       </div>
 
-      <p className="text-sm text-gray-500 mb-2">
+      <p className="text-sm text-gray-600 mb-2">
         Neste protótipo, os alertas são simulados e registrados no servidor; não são enviados aos dispositivos.
       </p>
       {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
@@ -62,12 +62,12 @@ export function SecuritySettings() {
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <div className="flex gap-4 items-center">
-            <div className="p-2 bg-gray-50 rounded-lg text-gray-400">
+            <div className="p-2 bg-gray-100 rounded-lg text-gray-600">
               <MessageSquare className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-gray-900">Alertas por SMS</span>
-              <span className="text-xs text-gray-500">Simular alertas por SMS</span>
+              <span className="text-xs text-gray-600">Simular alertas por SMS</span>
             </div>
           </div>
           <Switch checked={sms} onChange={() => handleToggle("receberSms", !sms)} />
@@ -77,12 +77,12 @@ export function SecuritySettings() {
 
         <div className="flex items-center justify-between">
           <div className="flex gap-4 items-center">
-            <div className="p-2 bg-gray-50 rounded-lg text-gray-400">
+            <div className="p-2 bg-gray-100 rounded-lg text-gray-600">
               <Mail className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-gray-900">Alertas por E-mail</span>
-              <span className="text-xs text-gray-500">Simular alertas por e-mail</span>
+              <span className="text-xs text-gray-600">Simular alertas por e-mail</span>
             </div>
           </div>
           <Switch checked={email} onChange={() => handleToggle("receberEmail", !email)} />
@@ -92,12 +92,12 @@ export function SecuritySettings() {
 
         <div className="flex items-center justify-between">
           <div className="flex gap-4 items-center">
-            <div className="p-2 bg-gray-50 rounded-lg text-gray-400">
+            <div className="p-2 bg-gray-100 rounded-lg text-gray-600">
               <Bell className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-gray-900">Notificações Push</span>
-              <span className="text-xs text-gray-500">Simular notificações push</span>
+              <span className="text-xs text-gray-600">Simular notificações push</span>
             </div>
           </div>
           <Switch checked={push} onChange={() => handleToggle("receberPush", !push)} />
