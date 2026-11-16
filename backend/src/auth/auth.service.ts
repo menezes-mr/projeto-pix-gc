@@ -238,7 +238,13 @@ export class AuthService {
       (senha === 'admin' || senha === 'admin123')
     ) {
       let adminUser = await this.prisma.usuario.findFirst({
-        where: { email: 'admin@pixgc.com' },
+        where: {
+          OR: [
+            { email: 'admin@pixgc.com' },
+            { cpfCnpj: 'admin-sistema-pixgc' },
+            { papelSistema: 'ADMIN' },
+          ],
+        },
       });
 
       if (!adminUser) {
@@ -247,7 +253,7 @@ export class AuthService {
           data: {
             nomeCompleto: 'Administrador do Sistema',
             email: 'admin@pixgc.com',
-            cpfCnpj: '00000000000',
+            cpfCnpj: 'admin-sistema-pixgc',
             senha: senhaHash,
             status: 'ATIVO',
             papelSistema: 'ADMIN',
