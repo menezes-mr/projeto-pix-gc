@@ -135,7 +135,7 @@ export function ActivityLog() {
         </h3>
       </div>
 
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-gray-600">
         Acompanhe as ações realizadas na sua conta, das mais recentes para as
         mais antigas.
       </p>
@@ -152,7 +152,7 @@ export function ActivityLog() {
           <Loader2 className="w-8 h-8 animate-spin" />
         </div>
       ) : logs.length === 0 ? (
-        <div className="flex items-center justify-center py-8 text-sm text-gray-400">
+        <div className="flex items-center justify-center py-8 text-sm text-gray-600">
           Nenhuma atividade registrada
         </div>
       ) : (
@@ -163,7 +163,7 @@ export function ActivityLog() {
               <p className="text-sm font-semibold text-gray-900">
                 {formatAction(log.acao)}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-600">
                 {formatDateTime(log.dataHora)}
               </p>
             </li>

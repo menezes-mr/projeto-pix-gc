@@ -191,7 +191,7 @@ export function KeysAndContacts() {
                 {activeKeysCount}/5 ativas
               </span>
             </div>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-gray-600 mt-0.5">
               Copie rapidamente para receber transferências
             </p>
           </div>
@@ -210,8 +210,8 @@ export function KeysAndContacts() {
           </div>
         ) : keys.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-200 p-4 text-center flex flex-col items-center gap-1.5">
-            <Key className="w-6 h-6 text-gray-300" />
-            <span className="text-xs text-gray-500">
+            <Key className="w-6 h-6 text-gray-400" />
+            <span className="text-xs text-gray-600">
               Nenhuma chave PIX vinculada a esta conta.
             </span>
             <Link
@@ -235,12 +235,12 @@ export function KeysAndContacts() {
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-white border border-gray-200/80 flex items-center justify-center text-gray-600 shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-white border border-gray-200/80 flex items-center justify-center text-gray-700 shrink-0">
                       {getKeyIcon(k.tipoChave)}
                     </div>
                     <div className="flex flex-col min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-bold uppercase text-gray-500">
+                        <span className="text-[11px] font-bold uppercase text-gray-600">
                           {k.tipoChave}
                         </span>
                         {isSuspended && (
@@ -258,7 +258,7 @@ export function KeysAndContacts() {
                   <button
                     type="button"
                     onClick={() => void handleCopy(k.chaveId, k.valorChave)}
-                    className="inline-flex items-center gap-1 rounded-md bg-white hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:text-indigo-600 transition-colors cursor-pointer shrink-0"
+                    className="inline-flex items-center gap-1 rounded-md bg-white hover:bg-indigo-50 border border-gray-300 hover:border-indigo-200 px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:text-indigo-600 transition-colors cursor-pointer shrink-0"
                     title="Copiar chave PIX"
                   >
                     {copiedValue === k.chaveId ? (
@@ -291,7 +291,7 @@ export function KeysAndContacts() {
                   Contatos PIX Favoritos
                 </h3>
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-gray-600 mt-0.5">
                 Chaves salvas para agilizar suas transferências
               </p>
             </div>
@@ -324,14 +324,14 @@ export function KeysAndContacts() {
                 value={nomeContato}
                 onChange={(e) => setNomeContato(e.target.value)}
                 required
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:border-indigo-500"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-900 placeholder:text-gray-500 focus:outline-none focus:border-indigo-500"
               />
               <div className="flex gap-2">
                 <select
                   value={tipoChave}
                   onChange={(e) => setTipoChave(e.target.value)}
                   aria-label="Tipo de chave do contato"
-                  className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 focus:outline-none focus:border-indigo-500"
+                  className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-indigo-500"
                 >
                   <option value="CPF">CPF</option>
                   <option value="CNPJ">CNPJ</option>
@@ -345,7 +345,7 @@ export function KeysAndContacts() {
                   value={chavePix}
                   onChange={(e) => setChavePix(e.target.value)}
                   required
-                  className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:border-indigo-500"
+                  className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-900 placeholder:text-gray-500 focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <button
@@ -367,8 +367,8 @@ export function KeysAndContacts() {
             </div>
           ) : contacts.length === 0 ? (
             <div className="rounded-lg border border-dashed border-gray-200 p-4 text-center flex flex-col items-center gap-1">
-              <Users className="w-6 h-6 text-gray-300" />
-              <span className="text-xs text-gray-500">
+              <Users className="w-6 h-6 text-gray-400" />
+              <span className="text-xs text-gray-600">
                 Você ainda não possui contatos PIX salvos.
               </span>
             </div>
@@ -383,7 +383,7 @@ export function KeysAndContacts() {
                     <span className="text-xs font-bold text-gray-900 truncate">
                       {c.nomeContato}
                     </span>
-                    <span className="text-[11px] text-gray-500 truncate">
+                    <span className="text-[11px] font-medium text-gray-600 truncate">
                       {c.tipoChave}: {c.chavePix}
                     </span>
                   </div>
@@ -392,7 +392,7 @@ export function KeysAndContacts() {
                     <button
                       type="button"
                       onClick={() => void handleCopy(c.contatoId, c.chavePix)}
-                      className="p-1.5 rounded-md text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+                      className="p-1.5 rounded-md text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
                       title="Copiar chave do contato"
                     >
                       {copiedValue === c.contatoId ? (
@@ -403,7 +403,7 @@ export function KeysAndContacts() {
                     </button>
                     <Link
                       href={`/pix?tab=transferir&chave=${encodeURIComponent(c.chavePix)}`}
-                      className="p-1.5 rounded-md text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                      className="p-1.5 rounded-md text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
                       title="Transferir para este contato"
                     >
                       <Send className="w-3.5 h-3.5" />
@@ -412,7 +412,7 @@ export function KeysAndContacts() {
                       type="button"
                       disabled={deletingContactId === c.contatoId}
                       onClick={() => void handleDeleteContact(c.contatoId)}
-                      className="p-1.5 rounded-md text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
+                      className="p-1.5 rounded-md text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
                       title="Remover contato"
                     >
                       {deletingContactId === c.contatoId ? (

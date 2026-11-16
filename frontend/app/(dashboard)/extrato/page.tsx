@@ -333,22 +333,22 @@ export default function ExtratoPage() {
 
       <section className="flex flex-col gap-4 border-y border-gray-200 py-4">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-gray-700">
+          <label className="flex flex-col gap-1.5 text-sm font-semibold text-gray-800">
             De
             <input
               type="date"
               value={startDateDraft}
               onChange={(event) => setStartDateDraft(event.target.value)}
-              className="h-10 rounded-md border border-gray-300 bg-white px-3"
+              className="h-10 rounded-md border border-gray-300 bg-white px-3 text-gray-900"
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-gray-700">
+          <label className="flex flex-col gap-1.5 text-sm font-semibold text-gray-800">
             Até
             <input
               type="date"
               value={endDateDraft}
               onChange={(event) => setEndDateDraft(event.target.value)}
-              className="h-10 rounded-md border border-gray-300 bg-white px-3"
+              className="h-10 rounded-md border border-gray-300 bg-white px-3 text-gray-900"
             />
           </label>
           <button
@@ -494,7 +494,7 @@ export default function ExtratoPage() {
                           {statusLabels[transaction.status] || transaction.status}
                         </span>
                       </span>
-                      <span className="mt-1 block text-sm text-gray-500">
+                      <span className="mt-1 block text-sm text-gray-600">
                         {transactionDate
                           ? new Date(transactionDate).toLocaleString("pt-BR")
                           : "Data não disponível"}
@@ -502,7 +502,7 @@ export default function ExtratoPage() {
                           !transaction.dataEfetivacao &&
                           " · Débito programado"}
                       </span>
-                      <span className="mt-1 block truncate text-xs text-gray-400">
+                      <span className="mt-1 block truncate text-xs text-gray-500">
                         ID {transaction.transacaoId}
                       </span>
                     </span>
@@ -511,7 +511,7 @@ export default function ExtratoPage() {
                         isPending
                           ? "text-amber-700"
                           : isCanceledOrFailed
-                            ? "text-gray-400 line-through"
+                            ? "text-gray-500 line-through"
                             : isOutgoing
                               ? "text-gray-900"
                               : "text-emerald-700"

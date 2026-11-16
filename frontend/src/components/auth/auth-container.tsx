@@ -229,30 +229,30 @@ export function AuthContainer() {
             </div>
 
             <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col gap-4">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+              <h3 className="text-xs font-bold text-gray-600 uppercase tracking-wider">
                 NOTIFICAÇÕES DE SEGURANÇA
               </h3>
               
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-gray-800">SMS</span>
-                  <span className="text-xs text-gray-500">Alertas de transações e tokens</span>
+                  <span className="text-sm font-semibold text-gray-900">SMS</span>
+                  <span className="text-xs text-gray-600">Alertas de transações e tokens</span>
                 </div>
                 <Switch checked={notificationSms} onChange={() => setNotificationSms(!notificationSms)} />
               </div>
 
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-gray-800">E-mail</span>
-                  <span className="text-xs text-gray-500">Relatórios e comprovantes</span>
+                  <span className="text-sm font-semibold text-gray-900">E-mail</span>
+                  <span className="text-xs text-gray-600">Relatórios e comprovantes</span>
                 </div>
                 <Switch checked={notificationEmail} onChange={() => setNotificationEmail(!notificationEmail)} />
               </div>
 
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-gray-800">Push</span>
-                  <span className="text-xs text-gray-500">Avisos instantâneos no aparelho</span>
+                  <span className="text-sm font-semibold text-gray-900">Push</span>
+                  <span className="text-xs text-gray-600">Avisos instantâneos no aparelho</span>
                 </div>
                 <Switch checked={notificationPush} onChange={() => setNotificationPush(!notificationPush)} />
               </div>
@@ -266,7 +266,7 @@ export function AuthContainer() {
               {isSubmitting ? "Criando conta..." : "Criar Conta ⊕"}
             </Button>
             
-            <p className="text-[10px] text-center text-gray-400 mt-2 px-4 leading-relaxed">
+            <p className="text-xs text-center text-gray-600 mt-2 px-4 leading-relaxed">
               Ao continuar, você concorda com nossos Termos de Uso e Política de Privacidade e Proteção de Dados (LGPD).
             </p>
           </div>

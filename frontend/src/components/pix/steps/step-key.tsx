@@ -135,18 +135,18 @@ export function StepKey({ onNext }: StepKeyProps) {
 
       {isTitular && (
         <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-700">
             <Users className="w-4 h-4" />
             <span>Contatos Rápidos</span>
           </div>
 
           {loadingContacts ? (
-            <div className="flex items-center justify-center py-4 text-gray-400 gap-2 text-sm">
+            <div className="flex items-center justify-center py-4 text-gray-600 gap-2 text-sm">
               <Loader2 className="w-4 h-4 animate-spin" />
               <span>Carregando contatos...</span>
             </div>
           ) : contacts.length === 0 ? (
-            <p className="text-xs text-gray-400 py-2">
+            <p className="text-xs text-gray-600 py-2">
               Nenhum contato salvo encontrado.
             </p>
           ) : (
@@ -157,9 +157,9 @@ export function StepKey({ onNext }: StepKeyProps) {
                   type="button"
                   disabled={loading}
                   onClick={() => handleSelectContact(contact)}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50/70 hover:bg-indigo-50/60 hover:border-indigo-200 transition-colors text-left disabled:opacity-50"
+                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/70 hover:bg-indigo-50/60 hover:border-indigo-200 transition-colors text-left disabled:opacity-50"
                 >
-                  <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm shrink-0">
                     {contact.nomeContato.trim().charAt(0).toUpperCase() || (
                       <User className="w-4 h-4" />
                     )}
@@ -168,7 +168,7 @@ export function StepKey({ onNext }: StepKeyProps) {
                     <span className="text-sm font-semibold text-gray-900 truncate">
                       {contact.nomeContato}
                     </span>
-                    <span className="text-xs text-gray-500 truncate">
+                    <span className="text-xs text-gray-600 truncate">
                       {contact.tipoChave}: {contact.chavePix}
                     </span>
                   </div>

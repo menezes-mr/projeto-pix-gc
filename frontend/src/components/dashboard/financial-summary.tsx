@@ -126,10 +126,10 @@ export function FinancialSummary({
       className="flex flex-col gap-3"
     >
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-gray-700">
           Resumo Financeiro ({nomeMes})
         </h2>
-        <span className="text-xs text-gray-400">
+        <span className="text-xs font-medium text-gray-600">
           {qtdEfetivadasMes}{" "}
           {qtdEfetivadasMes === 1
             ? "operação efetivada"
@@ -140,7 +140,7 @@ export function FinancialSummary({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm flex flex-col justify-between gap-2">
-          <div className="flex items-center justify-between text-xs font-semibold text-gray-500 uppercase">
+          <div className="flex items-center justify-between text-xs font-bold text-gray-700 uppercase">
             <span>Entradas no Mês</span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <ArrowDownLeft className="w-4 h-4" />
@@ -149,17 +149,17 @@ export function FinancialSummary({
           {loading ? (
             <Loader2 className="w-5 h-5 text-emerald-600 animate-spin my-1" />
           ) : (
-            <div className="text-2xl font-bold text-emerald-600">
+            <div className="text-2xl font-bold text-emerald-700">
               {formatBrl(entradasMes)}
             </div>
           )}
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-gray-600">
             PIX recebidos e devoluções creditadas
           </span>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm flex flex-col justify-between gap-2">
-          <div className="flex items-center justify-between text-xs font-semibold text-gray-500 uppercase">
+          <div className="flex items-center justify-between text-xs font-bold text-gray-700 uppercase">
             <span>Saídas no Mês</span>
             <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
               <ArrowUpRight className="w-4 h-4" />
@@ -172,13 +172,13 @@ export function FinancialSummary({
               {formatBrl(saidasMes)}
             </div>
           )}
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-gray-600">
             Transferências e estornos enviados
           </span>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm flex flex-col justify-between gap-2">
-          <div className="flex items-center justify-between text-xs font-semibold text-gray-500 uppercase">
+          <div className="flex items-center justify-between text-xs font-bold text-gray-700 uppercase">
             <span>Balanço do Período</span>
             <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
               <Scale className="w-4 h-4" />
@@ -189,7 +189,7 @@ export function FinancialSummary({
           ) : (
             <div
               className={`text-2xl font-bold ${
-                balancoMes >= 0 ? "text-emerald-600" : "text-rose-600"
+                balancoMes >= 0 ? "text-emerald-700" : "text-rose-600"
               }`}
             >
               {balancoMes > 0
@@ -197,13 +197,13 @@ export function FinancialSummary({
                 : formatBrl(balancoMes)}
             </div>
           )}
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-gray-600">
             Resultado líquido de movimentações no mês
           </span>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm flex flex-col justify-between gap-2">
-          <div className="flex items-center justify-between text-xs font-semibold text-gray-500 uppercase">
+          <div className="flex items-center justify-between text-xs font-bold text-gray-700 uppercase">
             <span>Limite Diário Hoje</span>
             <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
               <Gauge className="w-4 h-4" />
@@ -217,7 +217,7 @@ export function FinancialSummary({
                 <span className="text-lg font-bold text-gray-900">
                   {formatBrl(disponivelHoje)}
                 </span>
-                <span className="text-[11px] font-semibold text-gray-500">
+                <span className="text-[11px] font-semibold text-gray-600">
                   {percentualLimite}% usado
                 </span>
               </div>
@@ -235,7 +235,7 @@ export function FinancialSummary({
               </div>
             </div>
           )}
-          <div className="flex items-center justify-between text-[11px] text-gray-400">
+          <div className="flex items-center justify-between text-[11px] text-gray-600 font-medium">
             <span>Usado: {formatBrl(usadoHoje)}</span>
             <Link
               href="/perfil"

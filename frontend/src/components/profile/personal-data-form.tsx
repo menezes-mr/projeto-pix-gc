@@ -50,8 +50,8 @@ export function PersonalDataForm() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <div className="flex justify-between items-center">
-            <label className="text-sm font-medium text-gray-700">CPF/CNPJ</label>
-            <div className="flex items-center gap-1 text-xs text-gray-400">
+            <label className="text-sm font-semibold text-gray-800">CPF/CNPJ</label>
+            <div className="flex items-center gap-1 text-xs font-medium text-gray-600">
               <Lock className="w-3 h-3" />
               <span>Somente leitura</span>
             </div>
@@ -59,7 +59,7 @@ export function PersonalDataForm() {
           <Input 
             value={user?.document || ""} 
             disabled 
-            className="bg-gray-100 text-gray-500 cursor-not-allowed border-gray-100"
+            className="bg-gray-100 text-gray-700 font-medium cursor-not-allowed border-gray-200 disabled:opacity-100"
           />
         </div>
 

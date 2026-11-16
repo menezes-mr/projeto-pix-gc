@@ -576,21 +576,21 @@ export default function AdminPage() {
               </div>
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400">De:</span>
+                  <span className="text-xs text-slate-300 font-medium">De:</span>
                   <input
                     type="date"
                     value={dataInicio}
                     onChange={(e) => setDataInicio(e.target.value)}
-                    className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white [color-scheme:dark] focus:outline-none focus:border-indigo-500"
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400">Até:</span>
+                  <span className="text-xs text-slate-300 font-medium">Até:</span>
                   <input
                     type="date"
                     value={dataFim}
                     onChange={(e) => setDataFim(e.target.value)}
-                    className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white [color-scheme:dark] focus:outline-none focus:border-indigo-500"
                   />
                 </div>
                 <button
@@ -619,7 +619,7 @@ export default function AdminPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col gap-2">
-                <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                <div className="flex items-center justify-between text-slate-300 text-xs font-semibold">
                   <span>VOLUME EFETIVADO</span>
                   <DollarSign className="w-4 h-4 text-emerald-400" />
                 </div>
@@ -629,29 +629,29 @@ export default function AdminPage() {
                     currency: "BRL",
                   })}
                 </div>
-                <span className="text-[11px] text-slate-500">Transações compensadas com sucesso</span>
+                <span className="text-[11px] text-slate-400">Transações compensadas com sucesso</span>
               </div>
 
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col gap-2">
-                <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                <div className="flex items-center justify-between text-slate-300 text-xs font-semibold">
                   <span>TOTAL DE TRANSAÇÕES</span>
                   <Activity className="w-4 h-4 text-indigo-400" />
                 </div>
                 <div className="text-2xl font-bold text-white">{totalTransacoesGeral}</div>
-                <span className="text-[11px] text-slate-500">{transacoesEfetivadas} efetivadas no período</span>
+                <span className="text-[11px] text-slate-400">{transacoesEfetivadas} efetivadas no período</span>
               </div>
 
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col gap-2">
-                <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                <div className="flex items-center justify-between text-slate-300 text-xs font-semibold">
                   <span>PIX PENDENTES / AGENDADOS</span>
                   <Calendar className="w-4 h-4 text-amber-400" />
                 </div>
                 <div className="text-2xl font-bold text-amber-400">{transacoesPendentes}</div>
-                <span className="text-[11px] text-slate-500">Aguardando execução pela rotina Cron</span>
+                <span className="text-[11px] text-slate-400">Aguardando execução pela rotina Cron</span>
               </div>
 
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col gap-2">
-                <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                <div className="flex items-center justify-between text-slate-300 text-xs font-semibold">
                   <span>TICKET MÉDIO</span>
                   <TrendingUp className="w-4 h-4 text-purple-400" />
                 </div>
@@ -661,7 +661,7 @@ export default function AdminPage() {
                     currency: "BRL",
                   })}
                 </div>
-                <span className="text-[11px] text-slate-500">Valor médio por operação efetivada</span>
+                <span className="text-[11px] text-slate-400">Valor médio por operação efetivada</span>
               </div>
             </div>
 

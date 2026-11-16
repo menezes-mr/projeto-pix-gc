@@ -31,7 +31,7 @@ export function ProfileHeader() {
             {currentRole}
           </span>
         </div>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-600">
           BancoDigital Ag {user?.agency || "0001"} • C/C{" "}
           {user?.accountNumber || "---"} •{" "}
           {currentRole === "TITULAR"
@@ -42,7 +42,7 @@ export function ProfileHeader() {
 
       {user?.accounts && user.accounts.length > 1 && (
         <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600">
             Conta Ativa na Sessão
           </span>
           <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
