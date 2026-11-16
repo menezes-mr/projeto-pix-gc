@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import {
   ArrowDownLeft,
@@ -11,17 +11,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
-import { api } from "@/lib/api";
 import type { PixTransaction } from "@/components/pix/pix-receipt";
-
-interface TransactionsResponse {
-  data: PixTransaction[];
-  meta: {
-    paginaAtual: number;
-    totalPaginas: number;
-    totalRegistros: number;
-  };
-}
 
 function toNumericValue(value: number | string | undefined): number {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
@@ -43,87 +33,83 @@ function isSameLocalDay(dateIso: string | null | undefined, now: Date): boolean 
   );
 }
 
-export function FinancialSummary() {
+function isSameLocalMonth(
+  dateIso: string | null | undefined,
+  now: Date,
+): boolean {
+  if (!dateIso) return false;
+  const d = new Date(dateIso);
+  if (Number.isNaN(d.getTime())) return false;
+  return (
+    d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+  );
+}
+
+interface FinancialSummaryProps {
+  transactions: PixTransaction[];
+  loading: boolean;
+}
+
+export function FinancialSummary({
+  transactions,
+  loading,
+}: FinancialSummaryProps) {
   const { user } = useAuth();
   const contaId = user?.contaId;
   const dailyLimit = user?.dailyLimit ?? 1000;
 
-  const [loading, setLoading] = useState(true);
-  const [entradasMes, setEntradasMes] = useState(0);
-  const [saidasMes, setSaidasMes] = useState(0);
-  const [qtdEfetivadasMes, setQtdEfetivadasMes] = useState(0);
-  const [usadoHoje, setUsadoHoje] = useState(0);
+  const { entradasMes, saidasMes, qtdEfetivadasMes, usadoHoje } =
+    useMemo(() => {
+      if (!contaId) {
+        return {
+          entradasMes: 0,
+          saidasMes: 0,
+          qtdEfetivadasMes: 0,
+          usadoHoje: 0,
+        };
+      }
 
-  useEffect(() => {
-    if (!contaId) return;
+      const now = new Date();
+      let totalIn = 0;
+      let totalOut = 0;
+      let countEfetivadas = 0;
+      let totalTodayOut = 0;
 
-    let active = true;
-    const now = new Date();
-    const firstDayMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      for (const tx of transactions) {
+        const isEfetivada =
+          tx.status === "EFETIVADA" || tx.status === "CONCLUIDA";
+        if (!isEfetivada) continue;
+        if (!isSameLocalMonth(tx.dataEfetivacao, now)) continue;
 
-    api
-      .get<TransactionsResponse>(`/contas/${contaId}/transacoes`, {
-        params: {
-          page: 1,
-          limit: 50,
-          dataInicio: firstDayMonth,
-          dataFim: todayStr,
-        },
-      })
-      .then((res) => {
-        if (!active) return;
-        const list = res.data.data || [];
-        let totalIn = 0;
-        let totalOut = 0;
-        let countEfetivadas = 0;
-        let totalTodayOut = 0;
+        const val = toNumericValue(tx.valor);
+        countEfetivadas += 1;
 
-        for (const tx of list) {
-          const isEfetivada =
-            tx.status === "EFETIVADA" || tx.status === "CONCLUIDA";
-          if (!isEfetivada) continue;
-
-          const val = toNumericValue(tx.valor);
-          countEfetivadas += 1;
-
-          if (tx.contaDestinoId === contaId && tx.contaOrigemId !== contaId) {
-            totalIn += val;
-          } else if (tx.contaOrigemId === contaId) {
-            totalOut += val;
-            if (
-              tx.tipoOperacao === "TRANSFERENCIA_SAIDA" &&
-              isSameLocalDay(tx.dataEfetivacao, now)
-            ) {
-              totalTodayOut += val;
-            }
+        if (tx.contaDestinoId === contaId && tx.contaOrigemId !== contaId) {
+          totalIn += val;
+        } else if (tx.contaOrigemId === contaId) {
+          totalOut += val;
+          if (
+            tx.tipoOperacao === "TRANSFERENCIA_SAIDA" &&
+            isSameLocalDay(tx.dataEfetivacao, now)
+          ) {
+            totalTodayOut += val;
           }
         }
+      }
 
-        setEntradasMes(totalIn);
-        setSaidasMes(totalOut);
-        setQtdEfetivadasMes(countEfetivadas);
-        setUsadoHoje(totalTodayOut);
-      })
-      .catch(() => {
-        if (!active) return;
-        setEntradasMes(0);
-        setSaidasMes(0);
-        setQtdEfetivadasMes(0);
-        setUsadoHoje(0);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [contaId]);
+      return {
+        entradasMes: totalIn,
+        saidasMes: totalOut,
+        qtdEfetivadasMes: countEfetivadas,
+        usadoHoje: totalTodayOut,
+      };
+    }, [contaId, transactions]);
 
   const balancoMes = entradasMes - saidasMes;
   const percentualLimite =
-    dailyLimit > 0 ? Math.min(100, Math.round((usadoHoje / dailyLimit) * 100)) : 0;
+    dailyLimit > 0
+      ? Math.min(100, Math.round((usadoHoje / dailyLimit) * 100))
+      : 0;
   const disponivelHoje = Math.max(0, dailyLimit - usadoHoje);
 
   const formatBrl = (val: number) =>
@@ -135,13 +121,20 @@ export function FinancialSummary() {
   });
 
   return (
-    <section aria-label="Resumo Financeiro do Mês" className="flex flex-col gap-3">
+    <section
+      aria-label="Resumo Financeiro do Mês"
+      className="flex flex-col gap-3"
+    >
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500">
           Resumo Financeiro ({nomeMes})
         </h2>
         <span className="text-xs text-gray-400">
-          {qtdEfetivadasMes} {qtdEfetivadasMes === 1 ? "operação efetivada" : "operações efetivadas"} no mês
+          {qtdEfetivadasMes}{" "}
+          {qtdEfetivadasMes === 1
+            ? "operação efetivada"
+            : "operações efetivadas"}{" "}
+          no mês
         </span>
       </div>
 
@@ -199,7 +192,9 @@ export function FinancialSummary() {
                 balancoMes >= 0 ? "text-emerald-600" : "text-rose-600"
               }`}
             >
-              {balancoMes > 0 ? `+${formatBrl(balancoMes)}` : formatBrl(balancoMes)}
+              {balancoMes > 0
+                ? `+${formatBrl(balancoMes)}`
+                : formatBrl(balancoMes)}
             </div>
           )}
           <span className="text-xs text-gray-400">
@@ -255,4 +250,3 @@ export function FinancialSummary() {
     </section>
   );
 }
-

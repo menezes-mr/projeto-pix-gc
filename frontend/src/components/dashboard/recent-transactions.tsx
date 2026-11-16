@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import axios from "axios";
 import {
@@ -19,15 +19,6 @@ import {
   PixReceipt,
   type PixTransaction,
 } from "@/components/pix/pix-receipt";
-
-interface TransactionsResponse {
-  data: PixTransaction[];
-  meta: {
-    paginaAtual: number;
-    totalPaginas: number;
-    totalRegistros: number;
-  };
-}
 
 const statusStyles: Record<string, string> = {
   EFETIVADA: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -66,66 +57,31 @@ function formatDateTime(value?: string | null): string {
   });
 }
 
-export function RecentTransactions() {
+interface RecentTransactionsProps {
+  transactions: PixTransaction[];
+  loading: boolean;
+  onRefresh: () => Promise<void>;
+}
+
+export function RecentTransactions({
+  transactions,
+  loading,
+  onRefresh,
+}: RecentTransactionsProps) {
   const { user, refreshAccount } = useAuth();
   const contaId = user?.contaId;
   const canCancel = user?.role === "TITULAR" || user?.role === "OPERADOR";
 
-  const [transactions, setTransactions] = useState<PixTransaction[]>([]);
-  const [loading, setLoading] = useState(true);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [selectedTx, setSelectedTx] = useState<PixTransaction | null>(null);
-
-  const loadTransactions = useCallback(async () => {
-    if (!contaId) return;
-    setLoading(true);
-    try {
-      const res = await api.get<TransactionsResponse>(
-        `/contas/${contaId}/transacoes`,
-        {
-          params: { page: 1, limit: 8 },
-        },
-      );
-      setTransactions(res.data.data || []);
-    } catch {
-      setTransactions([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [contaId]);
-
-  useEffect(() => {
-    if (!contaId) return;
-    let active = true;
-
-    api
-      .get<TransactionsResponse>(`/contas/${contaId}/transacoes`, {
-        params: { page: 1, limit: 8 },
-      })
-      .then((res) => {
-        if (active) {
-          setTransactions(res.data.data || []);
-        }
-      })
-      .catch(() => {
-        if (active) setTransactions([]);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [contaId]);
 
   const handleCancelScheduled = async (transacaoId: string) => {
     setCancelingId(transacaoId);
     setFeedback(null);
     try {
       await api.patch(`/pix/agendamentos/${transacaoId}/cancelar`);
-      await loadTransactions();
+      await onRefresh();
       await refreshAccount();
     } catch (err: unknown) {
       if (axios.isAxiosError<{ message?: string }>(err)) {
@@ -213,7 +169,9 @@ export function RecentTransactions() {
                     <button
                       type="button"
                       disabled={cancelingId === item.transacaoId}
-                      onClick={() => void handleCancelScheduled(item.transacaoId)}
+                      onClick={() =>
+                        void handleCancelScheduled(item.transacaoId)
+                      }
                       className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 text-[11px] font-semibold text-rose-700 transition-colors cursor-pointer disabled:opacity-50"
                     >
                       {cancelingId === item.transacaoId ? (
@@ -242,7 +200,8 @@ export function RecentTransactions() {
             Nenhuma movimentação registrada ainda
           </p>
           <p className="text-xs text-gray-400 max-w-xs">
-            Realize uma transferência ou gere uma cobrança QR Code na Área PIX para começar.
+            Realize uma transferência ou gere uma cobrança QR Code na Área PIX
+            para começar.
           </p>
         </div>
       ) : (
@@ -368,4 +327,3 @@ export function RecentTransactions() {
     </div>
   );
 }
-

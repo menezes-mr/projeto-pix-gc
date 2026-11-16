@@ -40,6 +40,21 @@ export class ContaService {
     }
   }
 
+  async verificarVinculoConta(contaId: string, usuarioId: string) {
+    const vinculo = await this.prisma.usuarioConta.findFirst({
+      where: {
+        contaId,
+        usuarioId,
+        usuario: { status: StatusUsuario.ATIVO },
+      },
+    });
+    if (!vinculo) {
+      throw new ForbiddenException(
+        'Acesso permitido apenas aos usuários vinculados à conta.',
+      );
+    }
+  }
+
   private gerarNumeroContaUnico(): string {
     const numeroSemDigito = Math.floor(100000 + Math.random() * 900000);
     const digito = Math.floor(Math.random() * 10);
@@ -340,7 +355,12 @@ export class ContaService {
     dataInicio?: string,
     dataFim?: string,
   ) {
-    const conta = await this.prisma.conta.findUnique({ where: { contaId } });
+    const [conta, vinculo] = await Promise.all([
+      this.prisma.conta.findUnique({ where: { contaId } }),
+      this.prisma.usuarioConta.findFirst({
+        where: { contaId, usuarioId: usuarioIdLogado },
+      }),
+    ]);
 
     if (!conta) {
       throw new NotFoundException('Conta bancária não encontrada.');
@@ -349,10 +369,6 @@ export class ContaService {
     if (conta.status !== 'ATIVA') {
       throw new ForbiddenException('Conta não está ativa.');
     }
-
-    const vinculo = await this.prisma.usuarioConta.findFirst({
-      where: { contaId, usuarioId: usuarioIdLogado },
-    });
 
     if (!vinculo) {
       throw new ForbiddenException(
@@ -386,7 +402,7 @@ export class ContaService {
       ];
     }
 
-    const [transacoes, total] = await this.prisma.$transaction([
+    const [transacoes, total] = await Promise.all([
       this.prisma.transacaoPix.findMany({
         where,
         include: {
