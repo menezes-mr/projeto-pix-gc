@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { CheckCircle2, UserPlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/auth-context";
 import axios from "axios";
 import { api } from "@/lib/api";
 
@@ -24,6 +25,8 @@ interface StepConfirmProps {
 }
 
 export function StepConfirm({ recipient, amount, scheduledAt, onNext, loading, error, onBack }: StepConfirmProps) {
+  const { user } = useAuth();
+  const isTitular = (user?.role || "TITULAR") === "TITULAR";
   const [savingContact, setSavingContact] = useState(false);
   const [contactSaved, setContactSaved] = useState(false);
   const [contactFeedback, setContactFeedback] = useState<{
@@ -99,34 +102,41 @@ export function StepConfirm({ recipient, amount, scheduledAt, onNext, loading, e
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Button
-          type="button"
-          onClick={handleSaveContact}
-          disabled={savingContact || contactSaved || loading}
-          className="w-full h-11 text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 gap-2 border border-indigo-200 disabled:opacity-60"
-        >
-          {savingContact ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : contactSaved ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          ) : (
-            <UserPlus className="w-4 h-4" />
-          )}
-          {contactSaved ? "Salvo nos contatos PIX" : "Salvar nos meus contatos PIX"}
-        </Button>
+      {isTitular && (
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            onClick={handleSaveContact}
+            disabled={savingContact || contactSaved || loading}
+            className="w-full h-11 text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 gap-2 border border-indigo-200 disabled:opacity-60"
+          >
+            {savingContact ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : contactSaved ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            ) : (
+              <UserPlus className="w-4 h-4" />
+            )}
+            {contactSaved
+              ? "Salvo nos contatos PIX"
+              : "Salvar nos meus contatos PIX"}
+          </Button>
 
-        {contactFeedback.type === "success" && (
-          <p className="text-xs font-medium text-emerald-600 text-center">
-            {contactFeedback.message}
-          </p>
-        )}
-        {contactFeedback.type === "error" && (
-          <p role="alert" className="text-xs font-medium text-red-600 text-center">
-            {contactFeedback.message}
-          </p>
-        )}
-      </div>
+          {contactFeedback.type === "success" && (
+            <p className="text-xs font-medium text-emerald-600 text-center">
+              {contactFeedback.message}
+            </p>
+          )}
+          {contactFeedback.type === "error" && (
+            <p
+              role="alert"
+              className="text-xs font-medium text-red-600 text-center"
+            >
+              {contactFeedback.message}
+            </p>
+          )}
+        </div>
+      )}
 
       {error && <p role="alert" className="text-sm font-medium text-red-600">{error}</p>}
 

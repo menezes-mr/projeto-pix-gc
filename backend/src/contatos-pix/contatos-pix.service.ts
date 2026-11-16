@@ -11,14 +11,32 @@ import { CreateContatoPixDto } from './dto/create-contato-pix.dto';
 export class ContatosPixService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listar(usuarioId: string) {
+  private async verificarTitularContaAtiva(
+    usuarioId: string,
+    contaId?: string,
+  ) {
+    if (contaId && this.prisma.usuarioConta?.findFirst) {
+      const vinculo = await this.prisma.usuarioConta.findFirst({
+        where: { usuarioId, contaId },
+      });
+      if (!vinculo || vinculo.papel !== 'TITULAR') {
+        throw new ForbiddenException(
+          'Apenas o titular da conta pode visualizar ou gerenciar contatos PIX.',
+        );
+      }
+    }
+  }
+
+  async listar(usuarioId: string, contaId?: string) {
+    await this.verificarTitularContaAtiva(usuarioId, contaId);
     return this.prisma.contatoPix.findMany({
       where: { usuarioId },
       orderBy: { nomeContato: 'asc' },
     });
   }
 
-  async criar(usuarioId: string, dto: CreateContatoPixDto) {
+  async criar(usuarioId: string, dto: CreateContatoPixDto, contaId?: string) {
+    await this.verificarTitularContaAtiva(usuarioId, contaId);
     const contatoExistente = await this.prisma.contatoPix.findFirst({
       where: {
         usuarioId,
@@ -42,7 +60,8 @@ export class ContatosPixService {
     });
   }
 
-  async remover(usuarioId: string, contatoId: string) {
+  async remover(usuarioId: string, contatoId: string, contaId?: string) {
+    await this.verificarTitularContaAtiva(usuarioId, contaId);
     const contato = await this.prisma.contatoPix.findUnique({
       where: { contatoId },
     });

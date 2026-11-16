@@ -30,7 +30,7 @@ export class ContatosPixController {
   @Get()
   @ApiOperation({ summary: 'Listar contatos PIX do usuário autenticado' })
   async listar(@Req() req: RequestAutenticada) {
-    return this.contatosPixService.listar(req.user.usuarioId);
+    return this.contatosPixService.listar(req.user.usuarioId, req.user.contaId);
   }
 
   @Post()
@@ -40,7 +40,11 @@ export class ContatosPixController {
     @Req() req: RequestAutenticada,
     @Body() dto: CreateContatoPixDto,
   ) {
-    return this.contatosPixService.criar(req.user.usuarioId, dto);
+    return this.contatosPixService.criar(
+      req.user.usuarioId,
+      dto,
+      req.user.contaId,
+    );
   }
 
   @Delete(':id')
@@ -48,6 +52,10 @@ export class ContatosPixController {
   @ApiOperation({ summary: 'Remover contato PIX da agenda' })
   @ApiParam({ name: 'id', description: 'ID do contato (contatoId)' })
   async remover(@Req() req: RequestAutenticada, @Param('id') id: string) {
-    return this.contatosPixService.remover(req.user.usuarioId, id);
+    return this.contatosPixService.remover(
+      req.user.usuarioId,
+      id,
+      req.user.contaId,
+    );
   }
 }
