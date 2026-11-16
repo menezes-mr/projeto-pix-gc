@@ -7,7 +7,13 @@ import { PixExtrato } from "./pix-extrato";
 import { PixCobranca } from "./pix-cobranca";
 
 export function PixArea() {
-  const [aba, setAba] = useState<"transferir" | "receber">("transferir");
+  const [aba, setAba] = useState<"transferir" | "receber">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") === "receber") return "receber";
+    }
+    return "transferir";
+  });
   const [revisao, setRevisao] = useState(0);
   const [revisaoChaves, setRevisaoChaves] = useState(0);
   const atualizar = () => setRevisao((valor) => valor + 1);
@@ -43,9 +49,11 @@ export function PixArea() {
             <PixCobranca key={revisaoChaves} />
           )}
         </div>
-        <PixKeysManager
-          onKeysChanged={() => setRevisaoChaves((valor) => valor + 1)}
-        />
+        <div id="chaves">
+          <PixKeysManager
+            onKeysChanged={() => setRevisaoChaves((valor) => valor + 1)}
+          />
+        </div>
       </div>
       <PixExtrato revisao={revisao} />
     </>

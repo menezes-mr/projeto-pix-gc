@@ -335,7 +335,7 @@ export class UsuariosService {
     const whereConsolidado: Prisma.TransacaoPixWhereInput = {
       OR: [
         { contaOrigemId: { in: contaIds } },
-        { contaDestinoId: { in: contaIds } },
+        { contaDestinoId: { in: contaIds }, status: 'EFETIVADA' },
       ],
       ...(Object.keys(filtroPeriodo).length > 0
         ? { AND: [filtroPeriodo] }

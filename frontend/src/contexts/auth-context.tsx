@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import axios from "axios";
 
@@ -131,9 +131,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               localStorage.setItem("pix_user", JSON.stringify(updated));
             })
             .catch((err: unknown) => {
-              if (
+              if (axios.isAxiosError(err) && err.response?.status === 401) {
+                localStorage.removeItem("pix_user");
+                localStorage.removeItem("pix_token");
+                setUser(null);
+              } else if (
                 axios.isAxiosError(err) &&
-                (err.response?.status === 403 || err.response?.status === 401)
+                err.response?.status === 403
               ) {
                 const updated: User = {
                   ...parsed,
@@ -158,11 +162,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const refreshAccount = async () => {
-    if (!user?.contaId) return;
+  const refreshAccount = useCallback(async () => {
+    const currentContaId = user?.contaId;
+    if (!currentContaId) return;
     try {
       const [res, resContas] = await Promise.all([
-        api.get(`/contas/${user.contaId}`),
+        api.get(`/contas/${currentContaId}`),
         api.get<UserAccountLink[]>("/auth/minhas-contas").catch(() => null),
       ]);
       setUser((prev) => {
@@ -185,9 +190,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return updated;
       });
     } catch (err: unknown) {
-      if (
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        localStorage.removeItem("pix_user");
+        localStorage.removeItem("pix_token");
+        setUser(null);
+      } else if (
         axios.isAxiosError(err) &&
-        (err.response?.status === 403 || err.response?.status === 401)
+        err.response?.status === 403
       ) {
         setUser((prev) => {
           if (!prev) return null;
@@ -200,7 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
     }
-  };
+  }, [user?.contaId]);
 
   const switchAccount = async (contaId: string) => {
     if (!user || contaId === user.contaId) return;

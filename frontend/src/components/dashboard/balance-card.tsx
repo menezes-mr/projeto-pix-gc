@@ -1,16 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Eye, EyeOff, Zap } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 
 export function BalanceCard() {
-  const { user, refreshAccount } = useAuth();
+  const { user } = useAuth();
   const [showBalance, setShowBalance] = useState(true);
-
-  useEffect(() => {
-    refreshAccount();
-  }, [refreshAccount]);
 
   const formattedBalance = (user?.balance ?? 0).toLocaleString("pt-BR", {
     style: "currency",
