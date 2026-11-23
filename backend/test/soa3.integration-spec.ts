@@ -2,7 +2,11 @@ import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  ConflictException,
+  INestApplication,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
@@ -113,38 +117,20 @@ describe('SOA 3 no PostgreSQL', () => {
     ).saldo.toNumber();
   }
 
-  it('exige aceite do destinatário e impede respostas concorrentes', async () => {
+  it('adiciona cotitular imediatamente e impede vínculos duplicados concorrentes', async () => {
     const d = await preparar();
     const contas = new ContaService(prisma);
-    const convite = await contas.adicionarCotitular(
-      d.origem.contaId,
-      d.a.usuarioId,
-      { identificador: d.b.email, papel: 'OPERADOR' },
-    );
-    expect(
-      await prisma.usuarioConta.findUnique({
-        where: {
-          usuarioId_contaId: {
-            usuarioId: d.b.usuarioId,
-            contaId: d.origem.contaId,
-          },
-        },
-      }),
-    ).toBeNull();
-    await expect(
-      contas.adicionarCotitular(d.origem.contaId, d.a.usuarioId, {
-        identificador: d.b.email,
-        papel: 'OPERADOR',
-      }),
-    ).rejects.toThrow();
-    await expect(
-      contas.responderConvite(convite.conviteId, d.a.usuarioId, true),
-    ).rejects.toThrow();
+    const dto = { identificador: d.b.email, papel: 'OPERADOR' };
     const resultados = await Promise.allSettled([
-      contas.responderConvite(convite.conviteId, d.b.usuarioId, true),
-      contas.responderConvite(convite.conviteId, d.b.usuarioId, true),
+      contas.adicionarCotitular(d.origem.contaId, d.a.usuarioId, dto),
+      contas.adicionarCotitular(d.origem.contaId, d.a.usuarioId, dto),
     ]);
     expect(resultados.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    const rejeitado = resultados.find((r) => r.status === 'rejected');
+    expect(rejeitado).toBeDefined();
+    if (rejeitado?.status === 'rejected') {
+      expect(rejeitado.reason).toBeInstanceOf(ConflictException);
+    }
     expect(
       await prisma.usuarioConta.findUnique({
         where: {
@@ -155,40 +141,6 @@ describe('SOA 3 no PostgreSQL', () => {
         },
       }),
     ).toMatchObject({ papel: 'OPERADOR' });
-  });
-
-  it('permite recusa e impede aceite após a expiração', async () => {
-    const d = await preparar();
-    const contas = new ContaService(prisma);
-    const dto = { identificador: d.b.email, papel: 'DEPENDENTE' };
-    const convite = await contas.adicionarCotitular(
-      d.origem.contaId,
-      d.a.usuarioId,
-      dto,
-    );
-    await contas.responderConvite(convite.conviteId, d.b.usuarioId, false);
-    expect(
-      await prisma.usuarioConta.findUnique({
-        where: {
-          usuarioId_contaId: {
-            usuarioId: d.b.usuarioId,
-            contaId: d.origem.contaId,
-          },
-        },
-      }),
-    ).toBeNull();
-    const renovado = await contas.adicionarCotitular(
-      d.origem.contaId,
-      d.a.usuarioId,
-      dto,
-    );
-    await prisma.conviteCotitular.update({
-      where: { conviteId: renovado.conviteId },
-      data: { expiraEm: new Date(0) },
-    });
-    await expect(
-      contas.responderConvite(renovado.conviteId, d.b.usuarioId, true),
-    ).rejects.toThrow();
   });
 
   it('aplica o limite diário entre transferências simultâneas da mesma conta', async () => {

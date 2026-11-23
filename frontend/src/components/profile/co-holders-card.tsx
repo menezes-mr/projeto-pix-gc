@@ -73,15 +73,6 @@ function escapeCsvCell(value: unknown): string {
   return `"${text.replace(/"/g, '""')}"`;
 }
 
-type Convite = {
-  conviteId: string;
-  papel: string;
-  status: string;
-  expiraEm: string;
-  conta?: { agencia: string; numeroConta: string };
-  usuario?: { nomeCompleto: string };
-};
-
 export function CoHoldersCard() {
   const { user, refreshAccount, switchAccount } = useAuth();
   const contaId = user?.contaId;
@@ -96,29 +87,6 @@ export function CoHoldersCard() {
     type: "success" | "error";
     text: string;
   } | null>(null);
-
-  const papelUsuario = user?.role;
-  const [recebidos, setRecebidos] = useState<Convite[]>([]);
-  const [enviados, setEnviados] = useState<Convite[]>([]);
-  const carregarConvites = useCallback(async () => {
-    try {
-      const resposta = await api.get<Convite[]>('/contas/convites/recebidos');
-      setRecebidos(resposta.data);
-      if (contaId && papelUsuario === 'TITULAR') {
-        const enviadosResposta = await api.get<Convite[]>(`/contas/${contaId}/convites`);
-        setEnviados(enviadosResposta.data);
-      } else setEnviados([]);
-    } catch { setFeedback({ type: 'error', text: 'Não foi possível carregar os convites.' }); }
-  }, [contaId, papelUsuario]);
-  useEffect(() => { const timer = setTimeout(() => { void carregarConvites(); }, 0); return () => clearTimeout(timer); }, [carregarConvites]);
-  const responderConvite = async (id: string, aceitar: boolean) => {
-    try {
-      await api.post(`/contas/convites/${id}/${aceitar ? 'aceitar' : 'recusar'}`);
-      await carregarConvites();
-      await refreshAccount();
-      setFeedback({ type: 'success', text: aceitar ? 'Convite aceito.' : 'Convite recusado.' });
-    } catch { setFeedback({ type: 'error', text: 'Não foi possível responder ao convite.' }); }
-  };
 
   const [modalOpen, setModalOpen] = useState(false);
   const [identificador, setIdentificador] = useState("");
@@ -216,7 +184,7 @@ export function CoHoldersCard() {
     }
   };
 
-  const handleConvidarCotitular = async (e: React.FormEvent) => {
+  const handleAdicionarCotitular = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contaId || !identificador.trim()) return;
 
@@ -233,10 +201,9 @@ export function CoHoldersCard() {
       setModalOpen(false);
       setFeedback({
         type: "success",
-        text: "Convite enviado. O vínculo será criado após o aceite.",
+        text: "Cotitular adicionado à conta com sucesso.",
       });
       await carregarCotitulares();
-      await carregarConvites();
       await refreshAccount();
     } catch (err: unknown) {
       if (isAxiosError<{ message?: string | string[] }>(err)) {
@@ -440,23 +407,10 @@ export function CoHoldersCard() {
             className="bg-indigo-600 hover:bg-indigo-700 gap-2 h-9 px-3 text-xs"
           >
             <UserPlus className="w-4 h-4" />
-            Convidar Cotitular
+            Adicionar Cotitular
           </Button>
         )}
       </div>
-
-      {recebidos.length > 0 && <div className="space-y-2" aria-label="Convites recebidos">
-        <h4 className="font-semibold">Convites recebidos</h4>
-        {recebidos.map((convite) => <div key={convite.conviteId} className="flex flex-wrap items-center gap-3 text-sm">
-          <span>Conta {convite.conta?.agencia} / {convite.conta?.numeroConta} — {convite.papel}</span>
-          <button type="button" className="text-indigo-700 underline" onClick={() => void responderConvite(convite.conviteId, true)}>Aceitar</button>
-          <button type="button" className="text-red-700 underline" onClick={() => void responderConvite(convite.conviteId, false)}>Recusar</button>
-        </div>)}
-      </div>}
-      {enviados.length > 0 && <div className="space-y-2" aria-label="Convites enviados">
-        <h4 className="font-semibold">Convites enviados</h4>
-        {enviados.map((convite) => <p key={convite.conviteId} className="text-sm">{convite.usuario?.nomeCompleto} — {convite.papel} — {convite.status === 'PENDENTE' && new Date(convite.expiraEm) <= new Date() ? 'EXPIRADO' : convite.status}</p>)}
-      </div>}
 
       <p className="text-sm text-gray-600">
         Gerencie os membros vinculados à conta ativa (
@@ -681,7 +635,7 @@ export function CoHoldersCard() {
                   id="modal-cotitular-title"
                   className="font-semibold text-gray-900"
                 >
-                  Convidar Cotitular
+                  Adicionar Cotitular
                 </h4>
               </div>
               <button
@@ -694,7 +648,7 @@ export function CoHoldersCard() {
             </div>
 
             <form
-              onSubmit={handleConvidarCotitular}
+              onSubmit={handleAdicionarCotitular}
               className="flex flex-col gap-4"
             >
               <Input
@@ -744,7 +698,7 @@ export function CoHoldersCard() {
                   className="bg-indigo-600 hover:bg-indigo-700 gap-2"
                 >
                   {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {submitting ? "Enviando..." : "Enviar convite"}
+                  {submitting ? "Adicionando..." : "Adicionar cotitular"}
                 </Button>
               </div>
             </form>

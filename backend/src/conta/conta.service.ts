@@ -668,90 +668,37 @@ export class ContaService {
       );
     }
 
-    const agora = new Date();
-    const expiraEm = new Date(agora.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const chave = { contaId, usuarioId: usuarioCotitular.usuarioId };
     try {
-      return await this.prisma.conviteCotitular.create({
-        data: { ...chave, papel: dto.papel, expiraEm },
+      return await this.prisma.usuarioConta.create({
+        data: {
+          contaId,
+          usuarioId: usuarioCotitular.usuarioId,
+          papel: dto.papel,
+        },
+        include: {
+          usuario: {
+            select: {
+              usuarioId: true,
+              nomeCompleto: true,
+              email: true,
+              cpfCnpj: true,
+              telefone: true,
+              status: true,
+            },
+          },
+        },
       });
     } catch (erro) {
       if (
-        !(erro instanceof Prisma.PrismaClientKnownRequestError) ||
-        erro.code !== 'P2002'
-      )
-        throw erro;
-      const atualizado = await this.prisma.conviteCotitular.updateMany({
-        where: {
-          ...chave,
-          OR: [{ status: { not: 'PENDENTE' } }, { expiraEm: { lte: agora } }],
-        },
-        data: {
-          papel: dto.papel,
-          status: 'PENDENTE',
-          criadoEm: agora,
-          expiraEm,
-        },
-      });
-      if (atualizado.count !== 1)
-        throw new ConflictException('Já existe um convite pendente.');
-      return this.prisma.conviteCotitular.findUniqueOrThrow({
-        where: { contaId_usuarioId: chave },
-      });
-    }
-  }
-
-  async listarConvitesRecebidos(usuarioId: string) {
-    return this.prisma.conviteCotitular.findMany({
-      where: { usuarioId, status: 'PENDENTE', expiraEm: { gt: new Date() } },
-      include: { conta: { select: { agencia: true, numeroConta: true } } },
-    });
-  }
-
-  async listarConvitesEnviados(contaId: string, usuarioId: string) {
-    await this.verificarTitular(contaId, usuarioId);
-    return this.prisma.conviteCotitular.findMany({
-      where: { contaId },
-      include: { usuario: { select: { nomeCompleto: true } } },
-    });
-  }
-
-  async responderConvite(
-    conviteId: string,
-    usuarioId: string,
-    aceitar: boolean,
-  ) {
-    return this.prisma.$transaction(async (tx) => {
-      const convite = await tx.conviteCotitular.findFirst({
-        where: { conviteId, usuarioId },
-      });
-      if (!convite) throw new NotFoundException('Convite não encontrado.');
-      if (convite.status !== 'PENDENTE' || convite.expiraEm <= new Date())
-        throw new BadRequestException('Convite expirado ou já respondido.');
-      if (aceitar) {
-        const conta = await tx.conta.findUnique({
-          where: { contaId: convite.contaId },
-        });
-        if (!conta || conta.status !== 'ATIVA')
-          throw new BadRequestException('Conta indisponível.');
+        erro instanceof Prisma.PrismaClientKnownRequestError &&
+        erro.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'Este usuário já está vinculado a esta conta.',
+        );
       }
-      const atualizado = await tx.conviteCotitular.updateMany({
-        where: {
-          conviteId,
-          usuarioId,
-          status: 'PENDENTE',
-          expiraEm: { gt: new Date() },
-        },
-        data: { status: aceitar ? 'ACEITO' : 'RECUSADO' },
-      });
-      if (atualizado.count !== 1)
-        throw new ConflictException('Convite já respondido ou expirado.');
-      if (aceitar)
-        await tx.usuarioConta.create({
-          data: { contaId: convite.contaId, usuarioId, papel: convite.papel },
-        });
-      return { status: aceitar ? 'ACEITO' : 'RECUSADO' };
-    });
+      throw erro;
+    }
   }
 
   async removerCotitular(

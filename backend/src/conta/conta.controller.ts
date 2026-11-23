@@ -29,39 +29,6 @@ import { AdminRoleGuard } from '../common/guards/roles.guard';
 export class ContaController {
   constructor(private readonly contaService: ContaService) {}
 
-  @Get('convites/recebidos')
-  @UseGuards(JwtAuthGuard)
-  async convitesRecebidos(@Req() req: RequestAutenticada) {
-    return this.contaService.listarConvitesRecebidos(req.user.usuarioId);
-  }
-
-  @Post('convites/:conviteId/aceitar')
-  @UseGuards(JwtAuthGuard)
-  async aceitarConvite(
-    @Param('conviteId') id: string,
-    @Req() req: RequestAutenticada,
-  ) {
-    return this.contaService.responderConvite(id, req.user.usuarioId, true);
-  }
-
-  @Post('convites/:conviteId/recusar')
-  @UseGuards(JwtAuthGuard)
-  async recusarConvite(
-    @Param('conviteId') id: string,
-    @Req() req: RequestAutenticada,
-  ) {
-    return this.contaService.responderConvite(id, req.user.usuarioId, false);
-  }
-
-  @Get(':id/convites')
-  @UseGuards(JwtAuthGuard)
-  async convitesEnviados(
-    @Param('id') id: string,
-    @Req() req: RequestAutenticada,
-  ) {
-    return this.contaService.listarConvitesEnviados(id, req.user.usuarioId);
-  }
-
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
