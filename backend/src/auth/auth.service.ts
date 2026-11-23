@@ -231,60 +231,6 @@ export class AuthService {
 
   async adminLogin(loginDto: LoginDto) {
     const { identificador, senha } = loginDto;
-    const idTrimmed = identificador.trim().toLowerCase();
-
-    if (
-      (idTrimmed === 'admin' || idTrimmed === 'admin@pixgc.com') &&
-      (senha === 'admin' || senha === 'admin123')
-    ) {
-      let adminUser = await this.prisma.usuario.findFirst({
-        where: {
-          OR: [
-            { email: 'admin@pixgc.com' },
-            { cpfCnpj: 'admin-sistema-pixgc' },
-            { papelSistema: 'ADMIN' },
-          ],
-        },
-      });
-
-      if (!adminUser) {
-        const senhaHash = await bcrypt.hash('Admin123!', 10);
-        adminUser = await this.prisma.usuario.create({
-          data: {
-            nomeCompleto: 'Administrador do Sistema',
-            email: 'admin@pixgc.com',
-            cpfCnpj: 'admin-sistema-pixgc',
-            senha: senhaHash,
-            status: 'ATIVO',
-            papelSistema: 'ADMIN',
-          },
-        });
-      } else if (
-        adminUser.papelSistema !== 'ADMIN' ||
-        adminUser.status !== 'ATIVO'
-      ) {
-        adminUser = await this.prisma.usuario.update({
-          where: { usuarioId: adminUser.usuarioId },
-          data: { papelSistema: 'ADMIN', status: 'ATIVO' },
-        });
-      }
-
-      const payload = {
-        sub: adminUser.usuarioId,
-        email: adminUser.email,
-        contaId: null,
-      };
-      return {
-        access_token: this.jwtService.sign(payload),
-        usuario: {
-          id: adminUser.usuarioId,
-          nome: adminUser.nomeCompleto,
-          email: adminUser.email,
-          papelSistema: 'ADMIN',
-        },
-      };
-    }
-
     const usuario = await this.prisma.usuario.findFirst({
       where: {
         OR: [{ email: identificador }, { cpfCnpj: identificador }],

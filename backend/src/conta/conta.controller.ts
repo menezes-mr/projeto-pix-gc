@@ -38,7 +38,7 @@ export class ContaController {
     @Param('id') contaId: string,
     @Req() req: RequestAutenticada,
   ) {
-    await this.contaService.verificarVinculoConta(contaId, req.user.usuarioId);
+    await this.contaService.verificarVinculo(contaId, req.user.usuarioId);
     return await this.contaService.buscarContaPorId(contaId);
   }
 
@@ -160,7 +160,11 @@ export class ContaController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Listar titulares e cotitulares da conta' })
-  async listarCotitulares(@Param('id') contaId: string) {
+  async listarCotitulares(
+    @Param('id') contaId: string,
+    @Req() req: RequestAutenticada,
+  ) {
+    await this.contaService.verificarVinculo(contaId, req.user.usuarioId);
     return await this.contaService.listarCotitulares(contaId);
   }
 

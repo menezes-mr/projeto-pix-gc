@@ -2,13 +2,18 @@ import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  ConflictException,
+  INestApplication,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { ContaService } from '../src/conta/conta.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { HistoricoPixService } from '../src/shared/historico-pix/historico-pix.service';
 import { limiteDiarioExcedido } from '../src/shared/historico-pix/limite-diario-pix';
@@ -111,6 +116,32 @@ describe('SOA 3 no PostgreSQL', () => {
       await prisma.conta.findUniqueOrThrow({ where: { contaId: id } })
     ).saldo.toNumber();
   }
+
+  it('adiciona cotitular imediatamente e impede vínculos duplicados concorrentes', async () => {
+    const d = await preparar();
+    const contas = new ContaService(prisma);
+    const dto = { identificador: d.b.email, papel: 'OPERADOR' };
+    const resultados = await Promise.allSettled([
+      contas.adicionarCotitular(d.origem.contaId, d.a.usuarioId, dto),
+      contas.adicionarCotitular(d.origem.contaId, d.a.usuarioId, dto),
+    ]);
+    expect(resultados.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    const rejeitado = resultados.find((r) => r.status === 'rejected');
+    expect(rejeitado).toBeDefined();
+    if (rejeitado?.status === 'rejected') {
+      expect(rejeitado.reason).toBeInstanceOf(ConflictException);
+    }
+    expect(
+      await prisma.usuarioConta.findUnique({
+        where: {
+          usuarioId_contaId: {
+            usuarioId: d.b.usuarioId,
+            contaId: d.origem.contaId,
+          },
+        },
+      }),
+    ).toMatchObject({ papel: 'OPERADOR' });
+  });
 
   it('aplica o limite diário entre transferências simultâneas da mesma conta', async () => {
     const d = await preparar();
@@ -411,9 +442,22 @@ describe('SOA 3 no PostgreSQL', () => {
       const enviada = await request(app.getHttpServer())
         .post('/pix/transferencia')
         .auth(tokenA, { type: 'bearer' })
-        .send({ chavePixDestino: d.chave.valorChave, valor: 10 })
+        .send({
+          chavePixDestino: d.chave.valorChave,
+          valor: 10,
+          latitude: -3.71722,
+          longitude: -38.5433,
+        })
         .expect(200);
       const id = (enviada.body as { transacaoId: string }).transacaoId;
+      expect(
+        await prisma.transacaoPix.findUniqueOrThrow({
+          where: { transacaoId: id },
+        }),
+      ).toMatchObject({
+        latitude: -3.71722,
+        longitude: -38.5433,
+      });
       await request(app.getHttpServer())
         .post('/pix/estorno')
         .auth(tokenA, { type: 'bearer' })

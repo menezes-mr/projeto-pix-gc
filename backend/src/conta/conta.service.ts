@@ -40,19 +40,11 @@ export class ContaService {
     }
   }
 
-  async verificarVinculoConta(contaId: string, usuarioId: string) {
+  async verificarVinculo(contaId: string, usuarioId: string) {
     const vinculo = await this.prisma.usuarioConta.findFirst({
-      where: {
-        contaId,
-        usuarioId,
-        usuario: { status: StatusUsuario.ATIVO },
-      },
+      where: { contaId, usuarioId, usuario: { status: StatusUsuario.ATIVO } },
     });
-    if (!vinculo) {
-      throw new ForbiddenException(
-        'Acesso permitido apenas aos usuários vinculados à conta.',
-      );
-    }
+    if (!vinculo) throw new ForbiddenException('Acesso negado a esta conta.');
   }
 
   private gerarNumeroContaUnico(): string {
@@ -676,38 +668,37 @@ export class ContaService {
       );
     }
 
-    const novoVinculo = await this.prisma.usuarioConta.create({
-      data: {
-        contaId,
-        usuarioId: usuarioCotitular.usuarioId,
-        papel: dto.papel,
-      },
-      include: {
-        usuario: {
-          select: {
-            usuarioId: true,
-            nomeCompleto: true,
-            email: true,
-            cpfCnpj: true,
-            telefone: true,
-            status: true,
+    try {
+      return await this.prisma.usuarioConta.create({
+        data: {
+          contaId,
+          usuarioId: usuarioCotitular.usuarioId,
+          papel: dto.papel,
+        },
+        include: {
+          usuario: {
+            select: {
+              usuarioId: true,
+              nomeCompleto: true,
+              email: true,
+              cpfCnpj: true,
+              telefone: true,
+              status: true,
+            },
           },
         },
-      },
-    });
-
-    if (this.prisma.logAtividade?.create) {
-      await this.prisma.logAtividade
-        .create({
-          data: {
-            usuarioId: idUsuarioLogado,
-            acao: `ADICAO_COTITULAR: ${usuarioCotitular.nomeCompleto} (${dto.papel})`,
-          },
-        })
-        .catch(() => undefined);
+      });
+    } catch (erro) {
+      if (
+        erro instanceof Prisma.PrismaClientKnownRequestError &&
+        erro.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'Este usuário já está vinculado a esta conta.',
+        );
+      }
+      throw erro;
     }
-
-    return novoVinculo;
   }
 
   async removerCotitular(

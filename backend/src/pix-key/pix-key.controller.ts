@@ -11,6 +11,7 @@ import {
   Query,
   UseGuards,
   Req,
+  HttpException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -27,6 +28,8 @@ import { JwtAuthGuard, RequestAutenticada } from '../auth/jwt-auth.guard';
 @ApiBearerAuth()
 @Controller('pix/chaves')
 export class PixKeyController {
+  private readonly consultas = new Map<string, number[]>();
+
   constructor(private readonly pixKeyService: PixKeyService) {}
 
   @Get('minhas')
@@ -122,11 +125,30 @@ export class PixKeyController {
   }
 
   @Get(':valorChave')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: 'Consultar dados do recebedor por valor da chave PIX',
   })
   @ApiParam({ name: 'valorChave', description: 'Valor da chave PIX' })
-  async validarChave(@Param('valorChave') valorChave: string) {
+  async validarChave(
+    @Param('valorChave') valorChave: string,
+    @Req() req: RequestAutenticada,
+  ) {
+    const agora = Date.now();
+    for (const [id, tempos] of this.consultas) {
+      if (!tempos.some((tempo) => tempo > agora - 60000))
+        this.consultas.delete(id);
+    }
+    const tempos = (this.consultas.get(req.user.usuarioId) ?? []).filter(
+      (tempo) => tempo > agora - 60000,
+    );
+    if (tempos.length >= 30)
+      throw new HttpException(
+        'Muitas consultas. Tente novamente em instantes.',
+        429,
+      );
+    tempos.push(agora);
+    this.consultas.set(req.user.usuarioId, tempos);
     return this.pixKeyService.validarChavePix(valorChave);
   }
 }

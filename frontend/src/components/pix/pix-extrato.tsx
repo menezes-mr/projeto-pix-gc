@@ -125,7 +125,7 @@ export function PixExtrato({ revisao }: { revisao: number }) {
     canCancelSchedule;
 
   return (
-    <section className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col gap-3 text-gray-900">
+    <section className="bg-white text-gray-900 rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col gap-3">
       <div>
         <h2 className="font-bold text-xl text-gray-900">Extrato PIX</h2>
         <p className="text-sm text-gray-600">Últimas 50 transações</p>

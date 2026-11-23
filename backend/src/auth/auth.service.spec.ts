@@ -29,3 +29,24 @@ describe('AuthService', () => {
     expect(service).toBeDefined();
   });
 });
+
+describe('login administrativo', () => {
+  it('rejeita as credenciais fixas quando não há administrador cadastrado', async () => {
+    const prisma = {
+      usuario: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
+    };
+    const service = new AuthService(
+      prisma as unknown as PrismaService,
+      {} as JwtService,
+    );
+    await expect(
+      service.adminLogin({ identificador: 'admin', senha: 'admin123' }),
+    ).rejects.toThrow('Credenciais de administrador inválidas');
+    expect(prisma.usuario.create).not.toHaveBeenCalled();
+    expect(prisma.usuario.update).not.toHaveBeenCalled();
+  });
+});

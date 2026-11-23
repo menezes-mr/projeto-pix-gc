@@ -184,7 +184,7 @@ export function CoHoldersCard() {
     }
   };
 
-  const handleConvidarCotitular = async (e: React.FormEvent) => {
+  const handleAdicionarCotitular = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contaId || !identificador.trim()) return;
 
@@ -201,7 +201,7 @@ export function CoHoldersCard() {
       setModalOpen(false);
       setFeedback({
         type: "success",
-        text: "Cotitular vinculado à conta com sucesso!",
+        text: "Cotitular adicionado à conta com sucesso.",
       });
       await carregarCotitulares();
       await refreshAccount();
@@ -407,7 +407,7 @@ export function CoHoldersCard() {
             className="bg-indigo-600 hover:bg-indigo-700 gap-2 h-9 px-3 text-xs"
           >
             <UserPlus className="w-4 h-4" />
-            Convidar Cotitular
+            Adicionar Cotitular
           </Button>
         )}
       </div>
@@ -635,7 +635,7 @@ export function CoHoldersCard() {
                   id="modal-cotitular-title"
                   className="font-semibold text-gray-900"
                 >
-                  Convidar Cotitular
+                  Adicionar Cotitular
                 </h4>
               </div>
               <button
@@ -648,7 +648,7 @@ export function CoHoldersCard() {
             </div>
 
             <form
-              onSubmit={handleConvidarCotitular}
+              onSubmit={handleAdicionarCotitular}
               className="flex flex-col gap-4"
             >
               <Input
@@ -698,7 +698,7 @@ export function CoHoldersCard() {
                   className="bg-indigo-600 hover:bg-indigo-700 gap-2"
                 >
                   {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {submitting ? "Vinculando..." : "Vincular Cotitular"}
+                  {submitting ? "Adicionando..." : "Adicionar cotitular"}
                 </Button>
               </div>
             </form>

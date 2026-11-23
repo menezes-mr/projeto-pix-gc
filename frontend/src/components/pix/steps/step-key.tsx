@@ -84,7 +84,10 @@ export function StepKey({ onNext }: StepKeyProps) {
     setError("");
 
     try {
-      const response = await api.get(`/pix/chaves/${encodeURIComponent(trimmed)}`);
+      const lookupKey = /^[\d.\-/\s]+$/.test(trimmed)
+        ? trimmed.replace(/\D/g, "")
+        : trimmed;
+      const response = await api.get(`/pix/chaves/${encodeURIComponent(lookupKey)}`);
       const data = response.data as Recipient;
 
       if (data.contaId && user?.contaId && data.contaId === user.contaId) {

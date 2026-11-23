@@ -183,7 +183,11 @@ describe('ContaService cotitularidade', () => {
 
     expect(resultado.papel).toBe('OPERADOR');
     expect(resultado.usuarioId).toBe('u-2');
-    expect(prisma.usuarioConta.create).toHaveBeenCalled();
+    expect(prisma.usuarioConta.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { contaId: 'conta-1', usuarioId: 'u-2', papel: 'OPERADOR' },
+      }),
+    );
   });
 
   it('deve rejeitar adição de cotitular se solicitante não for TITULAR', async () => {
@@ -197,6 +201,24 @@ describe('ContaService cotitularidade', () => {
         papel: 'DEPENDENTE',
       }),
     ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('rejeita usuário inativo sem criar vínculo', async () => {
+    const prisma = criarMockPrisma();
+    prisma.usuarioConta.findFirst.mockResolvedValueOnce({ papel: 'TITULAR' });
+    prisma.usuario.findFirst.mockResolvedValue({
+      usuarioId: 'u-2',
+      status: 'INATIVO',
+    });
+    const service = new ContaService(prisma as unknown as PrismaService);
+
+    await expect(
+      service.adicionarCotitular('conta-1', 'u-1', {
+        identificador: 'joao@email.com',
+        papel: 'OPERADOR',
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.usuarioConta.create).not.toHaveBeenCalled();
   });
 
   it('deve rejeitar adição de cotitular duplicado', async () => {
