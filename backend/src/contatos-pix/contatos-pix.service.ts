@@ -29,10 +29,27 @@ export class ContatosPixService {
 
   async listar(usuarioId: string, contaId?: string) {
     await this.verificarTitularContaAtiva(usuarioId, contaId);
-    return this.prisma.contatoPix.findMany({
+    const contatos = await this.prisma.contatoPix.findMany({
       where: { usuarioId },
       orderBy: { nomeContato: 'asc' },
     });
+
+    if (!contatos.length || !this.prisma.chavePix?.findMany) {
+      return contatos;
+    }
+
+    const valoresChaves = contatos.map((c) => c.chavePix);
+    const chavesAtivas = await this.prisma.chavePix.findMany({
+      where: {
+        valorChave: { in: valoresChaves },
+        status: 'ATIVA',
+        conta: { status: 'ATIVA' },
+      },
+      select: { valorChave: true },
+    });
+
+    const conjuntoAtivas = new Set(chavesAtivas.map((k) => k.valorChave));
+    return contatos.filter((c) => conjuntoAtivas.has(c.chavePix));
   }
 
   async criar(usuarioId: string, dto: CreateContatoPixDto, contaId?: string) {

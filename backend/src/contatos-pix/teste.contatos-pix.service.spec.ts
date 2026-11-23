@@ -68,6 +68,35 @@ describe('ContatosPixService', () => {
       });
       expect(resultado).toEqual(contatosMock);
     });
+
+    it('deve ocultar contatos cuja chave PIX esteja desativada ou suspensa', async () => {
+      const contatosMock = [
+        {
+          contatoId: 'ct1',
+          nomeContato: 'Alice Ativa',
+          chavePix: 'alice@email.com',
+          tipoChave: 'EMAIL',
+          usuarioId: 'u1',
+        },
+        {
+          contatoId: 'ct2',
+          nomeContato: 'Bruno Desativado',
+          chavePix: '12345678900',
+          tipoChave: 'CPF',
+          usuarioId: 'u1',
+        },
+      ];
+      prisma.contatoPix.findMany.mockResolvedValue(contatosMock);
+      (prisma as unknown as { chavePix: { findMany: jest.Mock } }).chavePix = {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ valorChave: 'alice@email.com' }]),
+      };
+
+      const resultado = await service.listar('u1');
+
+      expect(resultado).toEqual([contatosMock[0]]);
+    });
   });
 
   describe('criar', () => {
