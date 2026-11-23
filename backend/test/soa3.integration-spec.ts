@@ -490,9 +490,22 @@ describe('SOA 3 no PostgreSQL', () => {
       const enviada = await request(app.getHttpServer())
         .post('/pix/transferencia')
         .auth(tokenA, { type: 'bearer' })
-        .send({ chavePixDestino: d.chave.valorChave, valor: 10 })
+        .send({
+          chavePixDestino: d.chave.valorChave,
+          valor: 10,
+          latitude: -3.71722,
+          longitude: -38.5433,
+        })
         .expect(200);
       const id = (enviada.body as { transacaoId: string }).transacaoId;
+      expect(
+        await prisma.transacaoPix.findUniqueOrThrow({
+          where: { transacaoId: id },
+        }),
+      ).toMatchObject({
+        latitude: -3.71722,
+        longitude: -38.5433,
+      });
       await request(app.getHttpServer())
         .post('/pix/estorno')
         .auth(tokenA, { type: 'bearer' })

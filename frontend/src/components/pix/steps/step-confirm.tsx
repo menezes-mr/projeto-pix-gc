@@ -138,6 +138,10 @@ export function StepConfirm({ recipient, amount, scheduledAt, onNext, loading, e
         </div>
       )}
 
+      <p className="text-sm text-gray-600">
+        Para registrar a localização do PIX, permita o acesso à localização quando o navegador solicitar.
+      </p>
+
       {error && <p role="alert" className="text-sm font-medium text-red-600">{error}</p>}
 
       <div className="flex flex-col gap-3 mt-4">

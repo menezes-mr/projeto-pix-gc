@@ -11,34 +11,13 @@ import { PixReceipt, type PixTransaction } from "@/components/pix/pix-receipt";
 import axios from "axios";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
+import { getCurrentCoordinates, LocationError } from "@/lib/geolocation";
 
 interface Recipient {
   chavePix: string;
   tipoChave: string;
   nomeCompleto: string;
   documentoMascarado: string;
-}
-
-function getCurrentCoordinates(): Promise<{ latitude: number; longitude: number } | null> {
-  return new Promise((resolve) => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      resolve(null);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
-      },
-      () => {
-        resolve(null);
-      },
-      { timeout: 5000 }
-    );
-  });
 }
 
 export function PixTransferFlow({ onCompleted }: { onCompleted?: () => void }) {
@@ -72,14 +51,17 @@ export function PixTransferFlow({ onCompleted }: { onCompleted?: () => void }) {
         chavePixDestino: recipient.chavePix,
         valor: amount,
         ...(scheduledAt ? { dataAgendamento: new Date(scheduledAt).toISOString() } : {}),
-        ...(coords ? { latitude: coords.latitude, longitude: coords.longitude } : {}),
+        latitude: coords.latitude,
+        longitude: coords.longitude,
       }, { timeout: 35000 });
       setTransaction(response.data);
       await refreshAccount();
       onCompleted?.();
       setStep(4);
     } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
+      if (err instanceof LocationError) {
+        setError(err.message);
+      } else if (axios.isAxiosError(err)) {
         setError(!err.response || err.response.status >= 500
           ? "Não foi possível confirmar a transferência. Confira o extrato antes de tentar novamente."
           : err.response.data?.message || "Erro ao transferir");
