@@ -22,8 +22,8 @@ services:
       dockerfile: Dockerfile
     container_name: pix_backend
     environment:
-      - DATABASE_URL=postgresql://pix_user:pix_password@db:5432/pix_db?schema=public
-      - DIRECT_URL=postgresql://pix_user:pix_password@db:5432/pix_db?schema=public
+      - DATABASE_URL=${DATABASE_URL:-postgresql://pix_user:pix_password@db:5432/pix_db?schema=public}
+      - DIRECT_URL=${DIRECT_URL:-postgresql://pix_user:pix_password@db:5432/pix_db?schema=public}
       - JWT_SECRET=${JWT_SECRET:-chave-secreta-projeto-pix-dev}
       - PIX_SIMULACAO_HABILITADA=${PIX_SIMULACAO_HABILITADA:-false}
     ports:
@@ -51,8 +51,8 @@ services:
     container_name: pix_studio
     command: npx prisma studio --port 5555 --hostname 0.0.0.0 --browser none
     environment:
-      - DATABASE_URL=postgresql://pix_user:pix_password@db:5432/pix_db?schema=public
-      - DIRECT_URL=postgresql://pix_user:pix_password@db:5432/pix_db?schema=public
+      - DATABASE_URL=${DATABASE_URL:-postgresql://pix_user:pix_password@db:5432/pix_db?schema=public}
+      - DIRECT_URL=${DIRECT_URL:-postgresql://pix_user:pix_password@db:5432/pix_db?schema=public}
     ports:
       - "5555:5555"
     depends_on:

@@ -347,7 +347,12 @@ export class ContaService {
     dataInicio?: string,
     dataFim?: string,
   ) {
-    const conta = await this.prisma.conta.findUnique({ where: { contaId } });
+    const [conta, vinculo] = await Promise.all([
+      this.prisma.conta.findUnique({ where: { contaId } }),
+      this.prisma.usuarioConta.findFirst({
+        where: { contaId, usuarioId: usuarioIdLogado },
+      }),
+    ]);
 
     if (!conta) {
       throw new NotFoundException('Conta bancária não encontrada.');
@@ -356,10 +361,6 @@ export class ContaService {
     if (conta.status !== 'ATIVA') {
       throw new ForbiddenException('Conta não está ativa.');
     }
-
-    const vinculo = await this.prisma.usuarioConta.findFirst({
-      where: { contaId, usuarioId: usuarioIdLogado },
-    });
 
     if (!vinculo) {
       throw new ForbiddenException(
@@ -383,7 +384,10 @@ export class ContaService {
 
     const skip = (page - 1) * limit;
     const where: Prisma.TransacaoPixWhereInput = {
-      OR: [{ contaOrigemId: contaId }, { contaDestinoId: contaId }],
+      OR: [
+        { contaOrigemId: contaId },
+        { contaDestinoId: contaId, status: StatusTransacao.EFETIVADA },
+      ],
     };
     if (Object.keys(dataFiltro).length > 0) {
       where.AND = [
@@ -393,15 +397,37 @@ export class ContaService {
       ];
     }
 
-    const [transacoes, total] = await this.prisma.$transaction([
+    const [transacoes, total] = await Promise.all([
       this.prisma.transacaoPix.findMany({
         where,
         include: {
           contaOrigem: {
-            select: { contaId: true, agencia: true, numeroConta: true },
+            select: {
+              contaId: true,
+              agencia: true,
+              numeroConta: true,
+              usuarios: {
+                where: { papel: 'TITULAR' },
+                take: 1,
+                select: {
+                  usuario: { select: { nomeCompleto: true } },
+                },
+              },
+            },
           },
           contaDestino: {
-            select: { contaId: true, agencia: true, numeroConta: true },
+            select: {
+              contaId: true,
+              agencia: true,
+              numeroConta: true,
+              usuarios: {
+                where: { papel: 'TITULAR' },
+                take: 1,
+                select: {
+                  usuario: { select: { nomeCompleto: true } },
+                },
+              },
+            },
           },
           usuarioSolicitante: {
             select: { usuarioId: true, nomeCompleto: true },

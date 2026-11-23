@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import axios from "axios";
 
@@ -134,9 +134,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               sessionStorage.setItem("pix_user", JSON.stringify(updated));
             })
             .catch((err: unknown) => {
-              if (
+              if (axios.isAxiosError(err) && err.response?.status === 401) {
+                sessionStorage.removeItem("pix_user");
+                sessionStorage.removeItem("pix_token");
+                setUser(null);
+              } else if (
                 axios.isAxiosError(err) &&
-                (err.response?.status === 403 || err.response?.status === 401)
+                err.response?.status === 403
               ) {
                 const updated: User = {
                   ...parsed,
@@ -161,15 +165,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const refreshAccount = async () => {
-    if (!user?.contaId) return;
+  const refreshAccount = useCallback(async () => {
+    const currentContaId = user?.contaId;
+    const currentUserId = user?.id;
+    if (!currentContaId || !currentUserId) return;
     try {
       const [res, resContas] = await Promise.all([
-        api.get(`/contas/${user.contaId}`),
+        api.get(`/contas/${currentContaId}`),
         api.get<UserAccountLink[]>("/auth/minhas-contas").catch(() => null),
       ]);
       setUser((prev) => {
-        if (!prev || prev.id !== user.id || prev.contaId !== user.contaId) return prev;
+        if (!prev || prev.id !== currentUserId || prev.contaId !== currentContaId) return prev;
         const contasList = resContas?.data ?? prev.accounts;
         const vinculoAtual = contasList?.find(
           (c) => c.contaId === prev.contaId,
@@ -188,9 +194,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return updated;
       });
     } catch (err: unknown) {
-      if (
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        sessionStorage.removeItem("pix_user");
+        sessionStorage.removeItem("pix_token");
+        setUser(null);
+      } else if (
         axios.isAxiosError(err) &&
-        (err.response?.status === 403 || err.response?.status === 401)
+        err.response?.status === 403
       ) {
         setUser((prev) => {
           if (!prev) return null;
@@ -203,7 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
     }
-  };
+  }, [user?.contaId, user?.id]);
 
   const switchAccount = async (contaId: string) => {
     if (!user || contaId === user.contaId) return;

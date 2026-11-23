@@ -71,7 +71,7 @@ export class ContaController {
     @Param('id') contaId: string,
     @Req() req: RequestAutenticada,
   ) {
-    await this.contaService.verificarTitular(contaId, req.user.usuarioId);
+    await this.contaService.verificarVinculo(contaId, req.user.usuarioId);
     return await this.contaService.buscarContaPorId(contaId);
   }
 

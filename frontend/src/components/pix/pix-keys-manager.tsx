@@ -323,9 +323,9 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
             <Loader2 className="w-8 h-8 animate-spin" />
           </div>
         ) : keys.length === 0 ? (
-          <div className="flex flex-col items-center justify-center flex-1 text-gray-400 gap-2">
-            <Key className="w-8 h-8" />
-            <span className="text-sm">Nenhuma chave cadastrada nesta conta</span>
+          <div className="flex flex-col items-center justify-center flex-1 text-gray-600 gap-2">
+            <Key className="w-8 h-8 text-gray-400" />
+            <span className="text-sm font-medium">Nenhuma chave cadastrada nesta conta</span>
           </div>
         ) : (
           keys.map((k) => {
@@ -340,7 +340,7 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 shrink-0 rounded-lg bg-gray-200/50 flex items-center justify-center text-gray-600">
+                  <div className="w-10 h-10 shrink-0 rounded-lg bg-gray-200/70 flex items-center justify-center text-gray-700">
                     {getIcon(k.tipoChave)}
                   </div>
                   <div className="flex flex-col min-w-0">
@@ -357,7 +357,7 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
                     <span className="text-sm font-medium text-gray-900 truncate">
                       {k.valorChave}
                     </span>
-                    <span className="text-xs text-gray-500 mt-0.5">
+                    <span className="text-xs text-gray-600 mt-0.5">
                       Criada em {new Date(k.dataCriacao).toLocaleDateString()}
                     </span>
                   </div>
@@ -366,7 +366,7 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
                   <button
                     type="button"
                     onClick={() => void handleCopyKey(k.chaveId, k.valorChave)}
-                    className="text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg transition-colors"
+                    className="text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg transition-colors"
                     title="Copiar chave PIX"
                   >
                     {copiedId === k.chaveId ? (
@@ -416,7 +416,7 @@ export function PixKeysManager({ onKeysChanged }: { onKeysChanged?: () => void }
                         type="button"
                         onClick={() => handleDeleteKey(k.chaveId)}
                         disabled={deletingId === k.chaveId}
-                        className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors disabled:opacity-50"
+                        className="text-gray-500 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors disabled:opacity-50"
                         title="Excluir chave PIX"
                       >
                         {deletingId === k.chaveId ? (
