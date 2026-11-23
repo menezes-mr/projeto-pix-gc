@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { CheckCircle2, UserPlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
@@ -12,6 +12,13 @@ interface Recipient {
   tipoChave: string;
   nomeCompleto: string;
   documentoMascarado: string;
+}
+
+interface ContatoPixItem {
+  contatoId: string;
+  nomeContato: string;
+  chavePix: string;
+  tipoChave: string;
 }
 
 interface StepConfirmProps {
@@ -28,11 +35,42 @@ export function StepConfirm({ recipient, amount, scheduledAt, onNext, loading, e
   const { user } = useAuth();
   const isTitular = (user?.role || "TITULAR") === "TITULAR";
   const [savingContact, setSavingContact] = useState(false);
+  const [checkingContact, setCheckingContact] = useState(isTitular);
   const [contactSaved, setContactSaved] = useState(false);
   const [contactFeedback, setContactFeedback] = useState<{
     type: "idle" | "success" | "error";
     message: string;
   }>({ type: "idle", message: "" });
+
+  useEffect(() => {
+    if (!isTitular) return;
+    let active = true;
+
+    api
+      .get<ContatoPixItem[]>("/contatos")
+      .then((res) => {
+        if (!active) return;
+        const targetKey = recipient.chavePix.trim().toLowerCase();
+        const alreadyExists = (res.data || []).some(
+          (c) => c.chavePix.trim().toLowerCase() === targetKey,
+        );
+        if (alreadyExists) {
+          setContactSaved(true);
+        }
+      })
+      .catch(() => {
+        // ignore error checking contacts
+      })
+      .finally(() => {
+        if (active) {
+          setCheckingContact(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isTitular, recipient.chavePix]);
 
   const formattedAmount = amount.toLocaleString("pt-BR", {
     style: "currency",
@@ -40,7 +78,7 @@ export function StepConfirm({ recipient, amount, scheduledAt, onNext, loading, e
   });
 
   const handleSaveContact = async () => {
-    if (savingContact || contactSaved) return;
+    if (checkingContact || savingContact || contactSaved) return;
     setSavingContact(true);
     setContactFeedback({ type: "idle", message: "" });
 
@@ -57,6 +95,10 @@ export function StepConfirm({ recipient, amount, scheduledAt, onNext, loading, e
       });
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
+        if (err.response?.status === 409) {
+          setContactSaved(true);
+          return;
+        }
         setContactFeedback({
           type: "error",
           message: err.response?.data?.message || "Erro ao salvar contato PIX.",
@@ -107,10 +149,10 @@ export function StepConfirm({ recipient, amount, scheduledAt, onNext, loading, e
           <Button
             type="button"
             onClick={handleSaveContact}
-            disabled={savingContact || contactSaved || loading}
-            className="w-full h-11 text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 gap-2 border border-indigo-200 disabled:opacity-60"
+            disabled={checkingContact || savingContact || contactSaved || loading}
+            className="w-full h-11 text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 gap-2 border border-indigo-200 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {savingContact ? (
+            {checkingContact || savingContact ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : contactSaved ? (
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -118,7 +160,7 @@ export function StepConfirm({ recipient, amount, scheduledAt, onNext, loading, e
               <UserPlus className="w-4 h-4" />
             )}
             {contactSaved
-              ? "Salvo nos contatos PIX"
+              ? "Chave já salva nos contatos PIX"
               : "Salvar nos meus contatos PIX"}
           </Button>
 
