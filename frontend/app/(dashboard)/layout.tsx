@@ -20,12 +20,6 @@ export default function DashboardLayout({
     }
   }, [user, loading, router]);
 
-  useEffect(() => {
-    if (user?.contaId) {
-      refreshAccount();
-    }
-  }, [user?.contaId, refreshAccount]);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
