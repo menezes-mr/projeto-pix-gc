@@ -20,6 +20,7 @@ export class AuthService {
     const { identificador, senha } = loginDto;
 
     const usuario = await this.prisma.usuario.findFirst({
+      relationLoadStrategy: 'join',
       where: {
         OR: [{ email: identificador }, { cpfCnpj: identificador }],
       },
@@ -148,6 +149,7 @@ export class AuthService {
 
   async listarMinhasContas(usuarioId: string) {
     const vinculos = await this.prisma.usuarioConta.findMany({
+      relationLoadStrategy: 'join',
       where: { usuarioId },
       include: {
         conta: {

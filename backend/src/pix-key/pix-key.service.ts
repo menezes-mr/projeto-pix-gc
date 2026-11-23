@@ -16,6 +16,7 @@ export class PixKeyService {
   async listarChavesDaConta(contaId: string, usuarioId?: string) {
     if (usuarioId && this.prisma.conta?.findUnique) {
       const conta = await this.prisma.conta.findUnique({
+        relationLoadStrategy: 'join',
         where: { contaId },
         include: {
           usuarios: {

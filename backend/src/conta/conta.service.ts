@@ -73,6 +73,7 @@ export class ContaService {
 
   async consultarSaldo(contaId: string, idUsuarioLogado: string) {
     const conta = await this.prisma.conta.findFirst({
+      relationLoadStrategy: 'join',
       where: {
         contaId,
         status: StatusConta.ATIVA,
@@ -399,6 +400,7 @@ export class ContaService {
 
     const [transacoes, total] = await Promise.all([
       this.prisma.transacaoPix.findMany({
+        relationLoadStrategy: 'join',
         where,
         include: {
           contaOrigem: {
@@ -590,6 +592,7 @@ export class ContaService {
     await this.buscarContaPorId(contaId);
 
     return await this.prisma.usuarioConta.findMany({
+      relationLoadStrategy: 'join',
       where: { contaId },
       include: {
         usuario: {
