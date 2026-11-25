@@ -1,0 +1,39 @@
+name: CD - Deploy para VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy via Docker Compose na VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Conectar via SSH e reiniciar contêineres com as integrações
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/projeto-pix-gc
+
+            # 1. Atualiza o repositório local com o estado exato da main
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+
+            # 2. Derruba os contêineres antigos
+            docker compose down --remove-orphans
+
+            # 3. Reconstrói e sobe os novos contêineres com as integrações
+            docker compose up -d --build
+
+            # 4. Aplica as migrations do Prisma no banco de dados
+            docker compose exec -T backend npx prisma migrate deploy
+
+            # 5. Limpa imagens antigas sem uso para economizar os 50 GB de disco
+            docker image prune -f
